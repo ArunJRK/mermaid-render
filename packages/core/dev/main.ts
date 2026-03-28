@@ -8,8 +8,7 @@ const renderer = new MermaidRenderer()
 // Simulates file system — in VS Code extension, these come from real files.
 
 const FILES: Record<string, string> = {
-  '/overview': `%% @layout map
-%% @link OrderSvc -> /order-service#orderFlow
+  '/overview': `%% @link OrderSvc -> /order-service#orderFlow
 %% @link PaymentSvc -> /payment-service#paymentFlow
 %% @link Auth -> /auth-service#authFlow
 %% @link NotifSvc -> /notification-service#notifFlow
@@ -80,8 +79,7 @@ graph TD
     Queue
     Stripe`,
 
-  '/order-service': `%% @layout narrative
-%% @link PaymentSvc -> /payment-service#paymentFlow
+  '/order-service': `%% @link PaymentSvc -> /payment-service#paymentFlow
 
 graph TD
     orderFlow[Receive Order] --> validate[Validate Order]
@@ -115,9 +113,7 @@ graph TD
         complete
     end`,
 
-  '/payment-service': `%% @layout blueprint
-
-graph TD
+  '/payment-service': `graph TD
     paymentFlow[Payment Request] --> authCard[Authorize Card]
     authCard --> gateway{Gateway Response}
     gateway -->|Approved| capture[Capture Funds]
@@ -139,9 +135,7 @@ graph TD
         webhook
     end`,
 
-  '/auth-service': `%% @layout narrative
-
-graph TD
+  '/auth-service': `graph TD
     authFlow[Auth Request] --> checkToken{Has Token?}
     checkToken -->|Yes| validateToken[Validate JWT]
     checkToken -->|No| login[Login Flow]
@@ -269,13 +263,8 @@ async function loadFile(filePath: string) {
   }
 
   currentFile = filePath
-  const result = await renderer.load(source)
-
-  // Sync layout buttons with the file's declared philosophy
-  const layoutMatch = source.match(/%% @layout (\w+)/)
-  if (layoutMatch) {
-    currentLayout = layoutMatch[1]
-  }
+  // Load with current user-selected philosophy (not per-file)
+  const result = await renderer.load(`%% @layout ${currentLayout}\n${source}`)
 
   applyThemeStyles(currentLayout)
 

@@ -4,8 +4,8 @@ import { DagreLayout } from '../layout/dagre-layout'
 import { ensureFontsInstalled } from './fonts'
 import type { Theme } from './theme'
 
-const PREVIEW_WIDTH = 280
-const PREVIEW_HEIGHT = 180
+const PREVIEW_WIDTH = 420
+const PREVIEW_HEIGHT = 280
 const PADDING = 12
 
 /**
