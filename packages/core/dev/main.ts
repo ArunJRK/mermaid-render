@@ -72,14 +72,13 @@ graph TD
         Redis
         UserDB
         OrderDB
-        S3
     end
 
-    subgraph external[External Services]
-        Email
-        Push
-        Queue
-    end`,
+    S3
+    Email
+    Push
+    Queue
+    Stripe`,
 
   '/order-service': `%% @layout narrative
 %% @link PaymentSvc -> /payment-service#paymentFlow
