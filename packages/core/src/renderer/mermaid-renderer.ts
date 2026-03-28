@@ -567,6 +567,13 @@ export class MermaidRenderer {
 
       // Wire click
       sprite.on('pointertap', (e: FederatedPointerEvent) => {
+        // If this is a collapsed summary node, clicking expands it
+        if (node.metadata?._isCollapsedSummary) {
+          const sgId = node.metadata._subgraphId as string
+          this.unfoldNode(sgId)
+          return
+        }
+
         const evt: NodeEvent = {
           nodeId: id,
           eventType: 'click',

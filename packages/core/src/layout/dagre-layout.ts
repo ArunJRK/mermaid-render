@@ -165,10 +165,11 @@ export class DagreLayout implements LayoutEngine {
     // Add collapsed subgraph summary nodes
     for (const sgId of collapsedSgIds) {
       const sg = graph.subgraphs.get(sgId)!
+      const summaryLabel = `▶ ${sg.label} (${sg.nodeIds.length})`
       clusterG.setNode(sgId, {
-        label: sg.label,
-        width: Math.max(cfg.nodeMinWidth, sg.label.length * 8 + cfg.nodePadding * 2),
-        height: cfg.nodeMinHeight,
+        label: summaryLabel,
+        width: Math.max(cfg.nodeMinWidth * 1.5, summaryLabel.length * 8 + cfg.nodePadding * 2),
+        height: cfg.nodeMinHeight * 1.2,
       })
     }
 
@@ -264,11 +265,12 @@ export class DagreLayout implements LayoutEngine {
       const sg = graph.subgraphs.get(sgId)!
       const originalNode = graph.nodes.get(sgId)
 
+      const summaryLabel = `▶ ${sg.label} (${sg.nodeIds.length})`
       const baseNode = originalNode ?? {
         id: sgId,
-        label: sg.label,
-        shape: 'rectangle' as const,
-        metadata: {},
+        label: summaryLabel,
+        shape: 'rounded' as const,
+        metadata: { _isCollapsedSummary: true, _subgraphId: sgId, _childCount: sg.nodeIds.length },
       }
 
       positionedNodes.set(sgId, {
