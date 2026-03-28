@@ -21,6 +21,7 @@ import { NarrativeLayout } from '../layout/narrative-layout'
 import { getTheme, type Theme } from './theme'
 import { LinkPreview } from './link-preview'
 import { LayoutAnimator } from './layout-animator'
+import { WireRegistry } from './wire-registry'
 import { drawWireHops } from './wire-hops'
 import { ensureFontsInstalled } from './fonts'
 
@@ -388,9 +389,13 @@ export class MermaidRenderer {
     this._busGraphics.clear()
     this._busSourceIds.clear()
 
-    // Blueprint: bus lines for multi-target edges from same source
+    // Blueprint: create wire registry and draw bus lines
     let edgesToRender = positioned.edges
+    const wireReg = new WireRegistry((theme as any).gridSize ?? 20)
     if (isBlueprint && this._graph) {
+      // Register all nodes as obstacles
+      wireReg.registerNodeObstacles(positioned.nodes)
+
       const edgeCounts = new Map<string, number>()
       for (const e of positioned.edges) {
         edgeCounts.set(e.source, (edgeCounts.get(e.source) ?? 0) + 1)
@@ -400,7 +405,7 @@ export class MermaidRenderer {
         if (count >= 2) busSourceIds.add(src)
       }
       this._busSourceIds = busSourceIds
-      this._drawBlueprintBusLines(positioned, theme, busSourceIds)
+      this._drawBlueprintBusLines(positioned, theme, busSourceIds, wireReg)
       edgesToRender = positioned.edges.filter(e => !busSourceIds.has(e.source))
     }
 
@@ -1035,7 +1040,7 @@ export class MermaidRenderer {
     return false
   }
 
-  private _drawBlueprintBusLines(positioned: PositionedGraph, theme: Theme, busSourceIds: Set<string>): void {
+  private _drawBlueprintBusLines(positioned: PositionedGraph, theme: Theme, busSourceIds: Set<string>, wireReg?: WireRegistry): void {
     if (!this._graph || !this._viewport) return
 
     const gridSize = (theme as any).gridSize ?? 20
@@ -1065,21 +1070,23 @@ export class MermaidRenderer {
 
       if (targets.length < 2) continue
 
-      // Find a clear trunk X lane
-      const trunkX = this._findClearVerticalLane(srcNode.x, srcPortY, Math.min(...targets.map(t => t.y)), positioned, excludeIds, gridSize)
-
-      // Find a clear horizontal bus Y
       const minTargetY = Math.min(...targets.map(t => t.y))
-      let busY = Math.round(((srcPortY + minTargetY) / 2) / gridSize) * gridSize
+
+      // Use registry to find clear lanes (globally unique)
+      const trunkX = wireReg
+        ? wireReg.findFreeVertical(srcNode.x, srcPortY, minTargetY)
+        : this._findClearVerticalLane(srcNode.x, srcPortY, minTargetY, positioned, excludeIds, gridSize)
+
       const minBusX = Math.min(trunkX, ...targets.map(t => t.x))
       const maxBusX = Math.max(trunkX, ...targets.map(t => t.x))
+      const baseBusY = Math.round(((srcPortY + minTargetY) / 2) / gridSize) * gridSize
+      const busY = wireReg
+        ? wireReg.findFreeHorizontal(baseBusY, minBusX, maxBusX)
+        : baseBusY
 
-      // Shift busY if it hits nodes
-      for (let attempt = 0; attempt < 15; attempt++) {
-        if (!this._horizontalHitsNode(busY, minBusX, maxBusX, positioned, excludeIds)) break
-        busY += (attempt % 2 === 0 ? 1 : -1) * (attempt + 1) * gridSize
-        busY = Math.round(busY / gridSize) * gridSize
-      }
+      // Claim trunk + bus in registry so future wires avoid them
+      wireReg?.claimVertical(trunkX, srcPortY, busY)
+      wireReg?.claimHorizontal(busY, minBusX, maxBusX)
 
       const busGfx = new Graphics()
 
@@ -1092,21 +1099,21 @@ export class MermaidRenderer {
       busGfx.moveTo(minBusX, busY)
       busGfx.lineTo(maxBusX, busY)
 
-      // Fan-out: each target gets a UNIQUE vertical lane
-      const usedLanes = new Set<number>()
-      usedLanes.add(trunkX) // trunk already uses this lane
+      // Fan-out: each target gets a globally unique vertical lane via registry
       for (const tgt of targets) {
-        let dropX = this._findClearVerticalLane(tgt.x, busY, tgt.y, positioned, excludeIds, gridSize)
-        // Ensure this lane isn't already used by another fan-out drop
-        while (usedLanes.has(dropX)) {
-          dropX += gridSize
-          dropX = Math.round(dropX / gridSize) * gridSize
-        }
-        usedLanes.add(dropX)
+        const dropX = wireReg
+          ? wireReg.findFreeVertical(tgt.x, busY, tgt.y)
+          : tgt.x
+
+        // Claim this drop lane
+        wireReg?.claimVertical(dropX, busY, tgt.y)
 
         busGfx.moveTo(dropX, busY)
         busGfx.lineTo(dropX, tgt.y)
-        if (dropX !== tgt.x) busGfx.lineTo(tgt.x, tgt.y)
+        if (dropX !== tgt.x) {
+          wireReg?.claimHorizontal(tgt.y, dropX, tgt.x)
+          busGfx.lineTo(tgt.x, tgt.y)
+        }
       }
 
       busGfx.stroke({ width: 1.5, color })
