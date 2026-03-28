@@ -519,7 +519,10 @@ export class MermaidRenderer {
       })
     }
 
-    // Apply initial detail level
+    // Auto-fit first (sets _fitZoom baseline), then apply detail levels
+    this.fitToView()
+
+    // Now that fitToView set the zoom, apply detail levels (relative to fit zoom)
     if (this._viewport) {
       this._updateDetailLevel(this._viewport._zoom)
     }
@@ -528,9 +531,6 @@ export class MermaidRenderer {
     if (this._focusStack.length > 0) {
       this._applyFocusDimming()
     }
-
-    // Auto-fit after rendering
-    this.fitToView()
   }
 
   /**
@@ -565,7 +565,7 @@ export class MermaidRenderer {
   }
 
   /** Cached fit-to-view zoom level — used as baseline for semantic zoom */
-  private _fitZoom: number | null = null
+  private _fitZoom: number = 1
 
   /**
    * Apply focus dimming: dim all elements not in the currently focused subgraph.
