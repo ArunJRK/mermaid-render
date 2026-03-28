@@ -645,16 +645,18 @@ export class MermaidRenderer {
           }
         })
 
-        // Hover shows wiki-style preview of the target file
-        sprite.on('pointerover', async () => {
+        // Hover shows wiki-style preview of the target file (debounced)
+        sprite.on('pointerover', () => {
           if (!linkDirective || !this.onResolvePreview || !this._linkPreview) return
           const theme = getTheme(this._currentPhilosophy as any)
-          const targetGraph = await this.onResolvePreview(linkDirective.targetFile)
-          if (targetGraph) {
-            // Get screen position of the node
-            const bounds = sprite.getBounds()
-            this._linkPreview.show(bounds.right, bounds.y, linkDirective.targetFile, targetGraph, theme)
-          }
+          const bounds = sprite.getBounds()
+          const resolver = this.onResolvePreview
+          this._linkPreview.scheduleShow(
+            bounds.right, bounds.y,
+            linkDirective.targetFile,
+            () => resolver(linkDirective.targetFile),
+            theme,
+          )
         })
 
         sprite.on('pointerout', () => {

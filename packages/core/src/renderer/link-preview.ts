@@ -18,6 +18,8 @@ export class LinkPreview {
   private _app: Application | null = null
   private _titleEl: HTMLDivElement
   private _visible = false
+  private _hoverTimer: ReturnType<typeof setTimeout> | null = null
+  private _cache = new Map<string, RenderGraph>()
 
   constructor(private _parentEl: HTMLElement) {
     // Create the floating card DOM
@@ -51,6 +53,39 @@ export class LinkPreview {
   /**
    * Show the preview near the given screen coordinates.
    */
+  /** Cache a resolved graph so hover doesn't re-parse */
+  cacheGraph(targetFile: string, graph: RenderGraph): void {
+    this._cache.set(targetFile, graph)
+  }
+
+  /** Schedule showing preview after a short debounce (300ms) */
+  scheduleShow(
+    x: number,
+    y: number,
+    targetFile: string,
+    resolveGraph: () => Promise<RenderGraph | null>,
+    theme: Theme,
+  ): void {
+    this.cancelSchedule()
+    this._hoverTimer = setTimeout(async () => {
+      let graph = this._cache.get(targetFile)
+      if (!graph) {
+        graph = await resolveGraph() ?? undefined
+        if (graph) this._cache.set(targetFile, graph)
+      }
+      if (graph) {
+        this.show(x, y, targetFile, graph, theme)
+      }
+    }, 300)
+  }
+
+  cancelSchedule(): void {
+    if (this._hoverTimer) {
+      clearTimeout(this._hoverTimer)
+      this._hoverTimer = null
+    }
+  }
+
   async show(
     x: number,
     y: number,
@@ -90,6 +125,7 @@ export class LinkPreview {
   }
 
   hide(): void {
+    this.cancelSchedule()
     if (!this._visible) return
     this._visible = false
     this._container.style.opacity = '0'
