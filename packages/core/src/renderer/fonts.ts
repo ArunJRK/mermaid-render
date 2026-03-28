@@ -46,4 +46,14 @@ export function ensureFontsInstalled(): void {
     },
     chars: ASCII_CHARS.split(''),
   })
+
+  BitmapFont.install({
+    name: 'MermaidBlueprint',
+    style: {
+      fontFamily: '"JetBrains Mono", "Fira Code", "Courier New", monospace',
+      fontSize: 14 * resolution,
+      fill: 0xffffff,
+    },
+    chars: ASCII_CHARS.split(''),
+  })
 }

@@ -16,6 +16,10 @@ export interface Theme {
   subgraphLabel: number
   /** Per-depth subgraph tints (Map philosophy uses gradient) */
   subgraphDepthTints?: number[]
+  /** Blueprint grid overlay */
+  gridColor?: number
+  gridAlpha?: number
+  gridSize?: number
   hoverGlow: number
   hoverGlowAlpha: number
   accent: number
@@ -85,27 +89,30 @@ const MAP: Theme = {
 // ── Blueprint "Grid" ─────────────────────────────────────────────────────────
 const BLUEPRINT: Theme = {
   name: 'Grid',
-  background: 0x0a192f,
-  nodeFill: 0x112240,
-  nodeStroke: 0x233554,
-  nodeStrokeSelected: 0x64ffda,
-  nodeText: 0xccd6f6,
-  edgeColor: 0x3d5a80,
-  edgeLabelColor: 0x8892b0,
-  subgraphFill: 0x112240,
+  background: 0x001a33,
+  nodeFill: 0x004080,
+  nodeStroke: 0x0066cc,
+  nodeStrokeSelected: 0x00ffcc,
+  nodeText: 0xffffff,
+  edgeColor: 0x0066cc,
+  edgeLabelColor: 0x99ccff,
+  subgraphFill: 0x002b55,
   subgraphFillAlpha: 0.3,
-  subgraphStroke: 0x233554,
+  subgraphStroke: 0x0066cc,
   subgraphStrokeAlpha: 0.5,
-  subgraphLabel: 0x8892b0,
-  hoverGlow: 0x64ffda,
+  subgraphLabel: 0x99ccff,
+  gridColor: 0x003366,
+  gridAlpha: 0.3,
+  gridSize: 20,
+  hoverGlow: 0x00ffcc,
   hoverGlowAlpha: 0.2,
-  accent: 0x64ffda,
+  accent: 0x00ffcc,
   strokeWidth: 1.5,
   cornerRadius: 4,
   dimmedAlpha: 0.2,
-  breadcrumbBg: '#0a192f',
-  breadcrumbText: '#8892b0',
-  breadcrumbAccent: '#64ffda',
+  breadcrumbBg: '#001a33',
+  breadcrumbText: '#99ccff',
+  breadcrumbAccent: '#00ffcc',
 }
 
 // ── Breath "Void" ────────────────────────────────────────────────────────────

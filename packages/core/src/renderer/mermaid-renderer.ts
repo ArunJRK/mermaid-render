@@ -1,4 +1,4 @@
-import { Application } from 'pixi.js'
+import { Application, Graphics } from 'pixi.js'
 import type {
   LoadResult,
   LoadOptions,
@@ -224,7 +224,7 @@ export class MermaidRenderer {
     this._graph = graph
     this._foldManager = new FoldManager(graph)
 
-    const layout = createLayoutEngine(this._currentPhilosophy as any)
+    const layout = createLayoutEngine(this._currentPhilosophy)
     this._positioned = layout.compute(graph)
     this._focusStack = []
     this._renderGraph(this._positioned)
@@ -363,8 +363,9 @@ export class MermaidRenderer {
       subgraphs: new Map(), // No subgraphs in focused view
     }
 
-    const layout = createLayoutEngine(this._currentPhilosophy as any)
+    const layout = createLayoutEngine(this._currentPhilosophy)
     const positioned = layout.compute(miniGraph)
+    const isBlueprint = this._currentPhilosophy === 'blueprint'
 
     // Clear and render
     this._viewport.removeChildren()
@@ -374,15 +375,18 @@ export class MermaidRenderer {
 
     // Edges
     for (const edge of positioned.edges) {
-      const eg = new EdgeGraphic(edge, theme)
+      const eg = new EdgeGraphic(edge, theme, isBlueprint ? positioned.nodes : undefined)
       this._edgeGraphics.push(eg)
       this._viewport.addChild(eg)
     }
 
+    // Determine font name based on philosophy
+    const fontName = isBlueprint ? 'MermaidBlueprint' : 'MermaidNode'
+
     // Nodes
     for (const [id, node] of positioned.nodes) {
       const isStub = id.startsWith('_stub_')
-      const sprite = new NodeSprite(node, theme)
+      const sprite = new NodeSprite(node, theme, false, fontName)
 
       // Stubs are faded
       if (isStub) {
@@ -533,11 +537,40 @@ export class MermaidRenderer {
 
     const theme = getTheme(this._currentPhilosophy as any)
 
+    const isBlueprint = this._currentPhilosophy === 'blueprint'
+
     // Clear previous children
     this._viewport.removeChildren()
     this._nodeSprites.clear()
     this._edgeGraphics = []
     this._subgraphContainers.clear()
+
+    // Draw blueprint grid background
+    if (isBlueprint && theme.gridColor !== undefined) {
+      const gridGfx = new Graphics()
+      const gridSize = theme.gridSize ?? 20
+      const gridColor = theme.gridColor
+      const gridAlpha = theme.gridAlpha ?? 0.3
+      // Extend grid beyond the graph bounds for visual completeness
+      const padding = 100
+      const startX = -padding
+      const startY = -padding
+      const endX = positioned.width + padding
+      const endY = positioned.height + padding
+
+      // Vertical lines
+      for (let x = startX; x <= endX; x += gridSize) {
+        gridGfx.moveTo(x, startY)
+        gridGfx.lineTo(x, endY)
+      }
+      // Horizontal lines
+      for (let y = startY; y <= endY; y += gridSize) {
+        gridGfx.moveTo(startX, y)
+        gridGfx.lineTo(endX, y)
+      }
+      gridGfx.stroke({ width: 1, color: gridColor, alpha: gridAlpha })
+      this._viewport.addChild(gridGfx)
+    }
 
     // Compute nesting depth for each subgraph (larger subgraphs containing smaller ones = deeper)
     const sgDepths = new Map<string, number>()
@@ -593,9 +626,9 @@ export class MermaidRenderer {
       this._viewport.addChild(sgc)
     }
 
-    // Draw edges
+    // Draw edges — pass all nodes for collision avoidance in Blueprint mode
     for (const edge of positioned.edges) {
-      const eg = new EdgeGraphic(edge, theme)
+      const eg = new EdgeGraphic(edge, theme, isBlueprint ? positioned.nodes : undefined)
       this._edgeGraphics.push(eg)
       this._viewport.addChild(eg)
     }
@@ -608,10 +641,13 @@ export class MermaidRenderer {
       }
     }
 
+    // Determine font name based on philosophy
+    const fontName = isBlueprint ? 'MermaidBlueprint' : 'MermaidNode'
+
     // Draw nodes (on top)
     for (const [id, node] of positioned.nodes) {
       const hasLink = linkedNodeIds.has(id)
-      const sprite = new NodeSprite(node, theme, hasLink)
+      const sprite = new NodeSprite(node, theme, hasLink, fontName)
       this._nodeSprites.set(id, sprite)
       this._viewport.addChild(sprite)
 
@@ -810,7 +846,7 @@ export class MermaidRenderer {
    */
   private _relayout(): void {
     if (!this._graph) return
-    const layout = createLayoutEngine(this._currentPhilosophy as any)
+    const layout = createLayoutEngine(this._currentPhilosophy)
     this._positioned = layout.compute(this._graph)
     this._renderGraph(this._positioned)
   }

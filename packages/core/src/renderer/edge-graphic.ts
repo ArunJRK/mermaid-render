@@ -1,6 +1,7 @@
 import { Graphics, BitmapText } from 'pixi.js'
-import type { PositionedEdge, EdgeStyle } from '../types'
+import type { PositionedEdge, PositionedNode, EdgeStyle } from '../types'
 import { ensureFontsInstalled } from './fonts'
+import { lineIntersectsRect, computeWaypoint } from '../layout/blueprint-layout'
 import type { Theme } from './theme'
 
 const DIMMED_ALPHA = 0.12
@@ -10,10 +11,49 @@ export class EdgeGraphic extends Graphics {
   readonly data: PositionedEdge
   private _labelText: BitmapText | null = null
 
-  constructor(edge: PositionedEdge, theme: Theme) {
+  constructor(edge: PositionedEdge, theme: Theme, allNodes?: Map<string, PositionedNode>) {
     super()
+    // If allNodes provided, apply collision avoidance to the edge points
+    if (allNodes) {
+      edge = this._applyCollisionAvoidance(edge, allNodes)
+    }
     this.data = edge
     this._draw(edge, theme)
+  }
+
+  /**
+   * Check if the edge's straight-line path collides with any non-endpoint node,
+   * and if so, insert a waypoint to route around it.
+   */
+  private _applyCollisionAvoidance(
+    edge: PositionedEdge,
+    allNodes: Map<string, PositionedNode>,
+  ): PositionedEdge {
+    const points = edge.points
+    if (points.length < 2) return edge
+
+    const srcPt = points[0]
+    const tgtPt = points[points.length - 1]
+
+    for (const [id, node] of allNodes) {
+      if (id === edge.source || id === edge.target) continue
+
+      const hw = node.width / 2
+      const hh = node.height / 2
+
+      if (lineIntersectsRect(srcPt.x, srcPt.y, tgtPt.x, tgtPt.y, node.x, node.y, hw, hh)) {
+        const waypoint = computeWaypoint(
+          srcPt.x, srcPt.y, tgtPt.x, tgtPt.y,
+          node.x, node.y, node.width, node.height,
+        )
+        return {
+          ...edge,
+          points: [srcPt, waypoint, tgtPt],
+        }
+      }
+    }
+
+    return edge
   }
 
   dim(on: boolean): void {

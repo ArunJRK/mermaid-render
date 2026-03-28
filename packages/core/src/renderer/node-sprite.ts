@@ -12,7 +12,7 @@ export class NodeSprite extends Container {
   private _selected = false
   private _theme: Theme
 
-  constructor(node: PositionedNode, theme: Theme, hasLink = false) {
+  constructor(node: PositionedNode, theme: Theme, hasLink = false, fontName = 'MermaidNode') {
     super()
     this.data = node
     this._theme = theme
@@ -38,7 +38,7 @@ export class NodeSprite extends Container {
     ensureFontsInstalled()
     this._label = new BitmapText({
       text: node.label,
-      style: { fontFamily: 'MermaidNode', fontSize: 14 },
+      style: { fontFamily: fontName, fontSize: 14 },
     })
     this._label.anchor.set(0.5)
     this.addChild(this._label)

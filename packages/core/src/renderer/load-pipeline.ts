@@ -1,18 +1,17 @@
-import type { RenderGraph, PositionedGraph, LayoutDirective, LayoutPhilosophy, RenderError } from '../types'
+import type { RenderGraph, PositionedGraph, LayoutDirective, RenderError } from '../types'
 import { buildGraph } from '../parser/graph-builder'
-import type { LayoutEngine } from '../layout/layout-engine'
 import { DagreLayout } from '../layout/dagre-layout'
+import { BlueprintLayout } from '../layout/blueprint-layout'
 import { NarrativeLayout } from '../layout/narrative-layout'
+import type { LayoutEngine } from '../layout/layout-engine'
 
-/**
- * Select the appropriate layout engine based on the philosophy.
- * Narrative uses the dedicated flow-lanes engine; others use dagre.
- */
-export function createLayoutEngine(philosophy: LayoutPhilosophy): LayoutEngine {
-  if (philosophy === 'narrative') {
-    return new NarrativeLayout({ philosophy })
+/** Factory: select the right layout engine for the given philosophy */
+export function createLayoutEngine(philosophy: string): LayoutEngine {
+  switch (philosophy) {
+    case 'narrative': return new NarrativeLayout()
+    case 'blueprint': return new BlueprintLayout()
+    default: return new DagreLayout({ philosophy: philosophy as any })
   }
-  return new DagreLayout({ philosophy })
 }
 
 export interface PipelineResult {
@@ -47,9 +46,9 @@ export class LoadPipeline {
 
     // Determine philosophy from options or directive
     const layoutDir = result.graph.directives.find((d): d is LayoutDirective => d.type === 'layout')
-    const philosophy = (options?.layout ?? layoutDir?.philosophy ?? 'narrative') as LayoutPhilosophy
+    const philosophy = (options?.layout ?? layoutDir?.philosophy ?? 'narrative') as any
 
-    // Layout — select engine based on philosophy
+    // Layout
     const layout = createLayoutEngine(philosophy)
     const positioned = layout.compute(result.graph)
 
