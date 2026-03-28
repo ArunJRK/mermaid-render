@@ -34,26 +34,29 @@ export class NodeSprite extends Container {
     this._drawShape(node.shape, node.width, node.height, theme.nodeStroke)
     this.addChild(this._gfx)
 
-    // Label — truncate to fit node width
+    // Label — full text, node must be sized to fit
     ensureFontsInstalled()
-    const maxLabelWidth = node.width - 16 // padding
-    let labelText = node.label
-    // Truncate if text would overflow
-    if (labelText.length > 2) {
-      // Rough check: if estimated width exceeds node width, truncate
-      const charWidth = fontName === 'MermaidBlueprint' ? 8.4 : 7.5
-      const estWidth = labelText.length * charWidth
-      if (estWidth > maxLabelWidth) {
-        const maxChars = Math.max(3, Math.floor(maxLabelWidth / charWidth) - 1)
-        labelText = labelText.slice(0, maxChars) + '..'
-      }
-    }
     this._label = new BitmapText({
-      text: labelText,
+      text: node.label,
       style: { fontFamily: fontName, fontSize: 14 },
     })
     this._label.anchor.set(0.5)
     this.addChild(this._label)
+
+    // If label is wider than node, expand the node shape to fit
+    const labelWidth = this._label.width
+    if (labelWidth + 20 > node.width) {
+      const expandedWidth = labelWidth + 24
+      this._gfx.clear()
+      this._drawShape(node.shape, expandedWidth, node.height, theme.nodeStroke)
+      // Update hit area to match
+      const hw = expandedWidth / 2 + 4
+      const hh = node.height / 2 + 4
+      this.hitArea = { contains: (x: number, y: number) => x >= -hw && x <= hw && y >= -hh && y <= hh }
+      // Redraw hover glow too
+      this._hoverGfx.clear()
+      this._drawHoverGlow(node.shape, expandedWidth + 12, node.height + 12)
+    }
 
     // Link badge — interactive icon at top-right indicating "has linked file"
     if (hasLink) {
