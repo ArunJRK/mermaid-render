@@ -21,6 +21,8 @@ graph TD
   `)
 
   console.log('Load result:', result)
+  console.log('Nodes:', result.graph ? Array.from(result.graph.nodes.keys()) : 'none')
+  console.log('Subgraphs:', result.graph ? Array.from(result.graph.subgraphs.entries()).map(([k, v]) => `${k}: ${v.label} [${v.nodeIds}]`) : 'none')
 
   renderer.on('node:click', (e) => {
     console.log('Clicked:', (e as any).nodeId)

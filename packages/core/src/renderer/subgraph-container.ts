@@ -45,6 +45,7 @@ export class SubgraphContainer extends Container {
         fontFamily: 'Inter, system-ui, sans-serif',
         fontWeight: 'bold',
       },
+      resolution: 4,
     })
     this._label.x = -hw + LABEL_PADDING
     this._label.y = -hh + LABEL_PADDING

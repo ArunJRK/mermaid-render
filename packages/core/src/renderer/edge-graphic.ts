@@ -82,6 +82,7 @@ export class EdgeGraphic extends Graphics {
           fill: 0xcbd5e1,
           fontFamily: 'Inter, system-ui, sans-serif',
         },
+        resolution: 4,
       })
       this._labelText.anchor.set(0.5)
       this._labelText.x = mid.x

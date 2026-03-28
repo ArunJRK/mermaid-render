@@ -38,7 +38,7 @@ export class NodeSprite extends Container {
     this._drawShape(node.shape, node.width, node.height, STROKE_COLOR)
     this.addChild(this._gfx)
 
-    // Label
+    // Label — use higher resolution so text stays crisp when zoomed in
     this._label = new Text({
       text: node.label,
       style: {
@@ -49,6 +49,7 @@ export class NodeSprite extends Container {
         wordWrapWidth: node.width - 16,
         align: 'center',
       },
+      resolution: 4,
     })
     this._label.anchor.set(0.5)
     this.addChild(this._label)
