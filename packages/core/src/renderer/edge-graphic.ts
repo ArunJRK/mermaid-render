@@ -4,6 +4,7 @@ import { ensureFontsInstalled } from './fonts'
 import { lineIntersectsRect, computeWaypoint } from '../layout/blueprint-layout'
 import type { Theme } from './theme'
 import type { WireSegment } from './wire-hops'
+import type { WireRegistry } from './wire-registry'
 
 const DIMMED_ALPHA = 0.12
 const ARROW_SIZE = 8
@@ -11,6 +12,7 @@ const ARROW_SIZE = 8
 export class EdgeGraphic extends Graphics {
   readonly data: PositionedEdge
   private _labelText: BitmapText | null = null
+  private _wireRegistry?: WireRegistry
 
   /** Orthogonal wire segments (set by Blueprint mode, read by wire-hop detector) */
   orthogonalSegments?: WireSegment[]
@@ -19,8 +21,9 @@ export class EdgeGraphic extends Graphics {
    * @param edgeIndex — unique index for this edge, used by Blueprint to offset parallel routes
    * @param totalEdges — total edges in the graph, used for channel spacing
    */
-  constructor(edge: PositionedEdge, theme: Theme, allNodes?: Map<string, PositionedNode>, philosophy?: string, edgeIndex = 0, totalEdges = 1, allSubgraphs?: Map<string, { x: number; y: number; width: number; height: number }>) {
+  constructor(edge: PositionedEdge, theme: Theme, allNodes?: Map<string, PositionedNode>, philosophy?: string, edgeIndex = 0, totalEdges = 1, allSubgraphs?: Map<string, { x: number; y: number; width: number; height: number }>, wireRegistry?: WireRegistry) {
     super()
+    this._wireRegistry = wireRegistry
     if (allNodes && philosophy !== 'blueprint') {
       edge = this._applyCollisionAvoidance(edge, allNodes)
     }
@@ -28,7 +31,7 @@ export class EdgeGraphic extends Graphics {
 
     switch (philosophy) {
       case 'blueprint':
-        this._drawOrthogonal(edge, theme, edgeIndex, totalEdges, allNodes)
+        this._drawOrthogonal(edge, theme, edgeIndex, totalEdges, allNodes, wireRegistry)
         break
       case 'breath':
         this._drawWhisper(edge, theme)
@@ -154,7 +157,7 @@ export class EdgeGraphic extends Graphics {
    *
    * Junction dots are drawn at bend points where the wire changes direction.
    */
-  private _drawOrthogonal(edge: PositionedEdge, theme: Theme, edgeIndex: number, totalEdges: number, allNodes?: Map<string, PositionedNode>): void {
+  private _drawOrthogonal(edge: PositionedEdge, theme: Theme, edgeIndex: number, totalEdges: number, allNodes?: Map<string, PositionedNode>, wireRegistry?: WireRegistry): void {
     const points = edge.points
     if (points.length < 2) return
 
