@@ -17,14 +17,14 @@ export class EdgeGraphic extends Graphics {
    */
   constructor(edge: PositionedEdge, theme: Theme, allNodes?: Map<string, PositionedNode>, philosophy?: string, edgeIndex = 0, totalEdges = 1) {
     super()
-    if (allNodes) {
+    if (allNodes && philosophy !== 'blueprint') {
       edge = this._applyCollisionAvoidance(edge, allNodes)
     }
     this.data = edge
 
     switch (philosophy) {
       case 'blueprint':
-        this._drawOrthogonal(edge, theme, edgeIndex, totalEdges)
+        this._drawOrthogonal(edge, theme, edgeIndex, totalEdges, allNodes)
         break
       case 'breath':
         this._drawWhisper(edge, theme)
@@ -145,7 +145,7 @@ export class EdgeGraphic extends Graphics {
    * Goes horizontal to midpoint x, then vertical to target y, then horizontal to target.
    * Snaps to 20px grid.
    */
-  private _drawOrthogonal(edge: PositionedEdge, theme: Theme, edgeIndex: number, totalEdges: number): void {
+  private _drawOrthogonal(edge: PositionedEdge, theme: Theme, edgeIndex: number, totalEdges: number, allNodes?: Map<string, PositionedNode>): void {
     const points = edge.points
     if (points.length < 2) return
 
@@ -154,11 +154,38 @@ export class EdgeGraphic extends Graphics {
     const color = theme.edgeColor
     const gridSize = (theme as any).gridSize ?? 20
 
-    // Each edge gets its own horizontal channel offset so wires don't overlap
-    // Spread edges across grid lines around the midpoint
+    // Find a horizontal channel Y that doesn't pass through any node
     const baseMidY = (src.y + tgt.y) / 2
     const channelOffset = (edgeIndex - totalEdges / 2) * gridSize * 0.6
-    const midY = Math.round((baseMidY + channelOffset) / gridSize) * gridSize
+    let midY = Math.round((baseMidY + channelOffset) / gridSize) * gridSize
+
+    // Check if this horizontal channel (from min(src.x, tgt.x) to max(src.x, tgt.x))
+    // passes through any node. If so, shift up or down until clear.
+    if (allNodes) {
+      const minX = Math.min(src.x, tgt.x)
+      const maxX = Math.max(src.x, tgt.x)
+      let attempts = 0
+      while (attempts < 20) {
+        let blocked = false
+        for (const [id, node] of allNodes) {
+          if (id === edge.source || id === edge.target) continue
+          const hw = node.width / 2 + 4  // small padding
+          const hh = node.height / 2 + 4
+          // Check if horizontal line at midY overlaps with node box
+          // and the horizontal span overlaps with the node's x range
+          if (midY >= node.y - hh && midY <= node.y + hh &&
+              maxX >= node.x - hw && minX <= node.x + hw) {
+            blocked = true
+            break
+          }
+        }
+        if (!blocked) break
+        // Shift channel by one grid step, alternating above/below
+        attempts++
+        midY += (attempts % 2 === 0 ? 1 : -1) * attempts * gridSize
+        midY = Math.round(midY / gridSize) * gridSize
+      }
+    }
 
     // Route: src → down to midY → across to tgt.x → down to tgt
     this.moveTo(src.x, src.y)
