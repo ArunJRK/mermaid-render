@@ -1,8 +1,12 @@
 import { Container } from 'pixi.js'
+import { Spring, type SpringConfig } from './spring'
 
 const MIN_ZOOM = 0.1
 const MAX_ZOOM = 5.0
 const ZOOM_FACTOR = 0.003
+
+/** Spring config for viewport transitions — slightly snappier than node springs. */
+const VIEWPORT_SPRING: SpringConfig = { stiffness: 170, damping: 26 }
 
 export interface ViewportTarget {
   x: number
@@ -13,6 +17,7 @@ export interface ViewportTarget {
 /**
  * Viewport container that supports zoom (wheel) and pan (drag on empty space).
  * Zoom targets the cursor position so the point under the cursor stays fixed.
+ * All animated transitions use damped spring physics for natural motion.
  */
 export class Viewport extends Container {
   /** Current zoom level (1 = 100%). */
@@ -34,8 +39,11 @@ export class Viewport extends Container {
   private _onPointerMove: ((e: PointerEvent) => void) | null = null
   private _onPointerUp: ((e: PointerEvent) => void) | null = null
 
-  // Animation state
+  // Spring animation state
   private _animationId: number | null = null
+  private _springX: Spring | null = null
+  private _springY: Spring | null = null
+  private _springZoom: Spring | null = null
 
   /**
    * Attach wheel/pointer listeners to the given canvas element.
@@ -99,9 +107,9 @@ export class Viewport extends Container {
   }
 
   /**
-   * Animate the viewport to fit given content dimensions.
+   * Animate the viewport to fit given content dimensions using spring physics.
    */
-  animatedFitToView(contentWidth: number, contentHeight: number, duration = 250): void {
+  animatedFitToView(contentWidth: number, contentHeight: number): void {
     if (!this._canvas || contentWidth <= 0 || contentHeight <= 0) return
     const cw = this._canvas.clientWidth
     const ch = this._canvas.clientHeight
@@ -112,14 +120,15 @@ export class Viewport extends Container {
     zoom = Math.max(zoom, MIN_ZOOM)
     const tx = (cw - contentWidth * zoom) / 2
     const ty = (ch - contentHeight * zoom) / 2
-    this.animateTo({ x: tx, y: ty, zoom }, duration)
+    this.animateTo({ x: tx, y: ty, zoom })
   }
 
   /**
    * Animate the viewport to center on a specific region (world coordinates).
    * The region is defined by center (cx, cy) and dimensions (w, h).
+   * Uses spring physics for natural motion.
    */
-  animateToRegion(cx: number, cy: number, w: number, h: number, duration = 250): void {
+  animateToRegion(cx: number, cy: number, w: number, h: number): void {
     if (!this._canvas) return
     const cw = this._canvas.clientWidth
     const ch = this._canvas.clientHeight
@@ -133,38 +142,67 @@ export class Viewport extends Container {
     const tx = cw / 2 - cx * zoom
     const ty = ch / 2 - cy * zoom
 
-    this.animateTo({ x: tx, y: ty, zoom }, duration)
+    this.animateTo({ x: tx, y: ty, zoom })
   }
 
   /**
-   * Smoothly animate viewport to a target position and zoom using ease-out cubic.
+   * Smoothly animate viewport to a target position and zoom using spring physics.
+   * Replaces the old ease-out cubic with three independent damped springs (x, y, zoom).
+   * The optional springConfig parameter overrides the default spring constants.
    */
-  animateTo(target: ViewportTarget, duration: number): void {
+  animateTo(target: ViewportTarget, springConfig?: SpringConfig): void {
     // Cancel any running animation
     if (this._animationId !== null) {
       cancelAnimationFrame(this._animationId)
       this._animationId = null
     }
 
-    const start: ViewportTarget = { x: this.x, y: this.y, zoom: this._zoom }
-    const startTime = performance.now()
+    const config = springConfig ?? VIEWPORT_SPRING
+
+    // Create or re-target springs from current position
+    this._springX = new Spring(this.x, config)
+    this._springY = new Spring(this.y, config)
+    this._springZoom = new Spring(this._zoom, config)
+
+    this._springX.setTarget(target.x)
+    this._springY.setTarget(target.y)
+    this._springZoom.setTarget(target.zoom)
+
+    let lastTime = performance.now()
 
     const tick = () => {
-      const elapsed = performance.now() - startTime
-      const t = Math.min(1, elapsed / duration)
-      // ease-out cubic: 1 - (1 - t)^3
-      const ease = 1 - Math.pow(1 - t, 3)
+      const now = performance.now()
+      const dt = (now - lastTime) / 1000 // seconds
+      lastTime = now
 
-      this.x = start.x + (target.x - start.x) * ease
-      this.y = start.y + (target.y - start.y) * ease
-      this._zoom = start.zoom + (target.zoom - start.zoom) * ease
+      this._springX!.tick(dt)
+      this._springY!.tick(dt)
+      this._springZoom!.tick(dt)
+
+      this.x = this._springX!.value
+      this.y = this._springY!.value
+      this._zoom = this._springZoom!.value
       this.scale.set(this._zoom)
       this.onZoomChange?.(this._zoom)
 
-      if (t < 1) {
+      const settled =
+        this._springX!.isSettled &&
+        this._springY!.isSettled &&
+        this._springZoom!.isSettled
+
+      if (!settled) {
         this._animationId = requestAnimationFrame(tick)
       } else {
+        // Snap to exact targets
+        this.x = target.x
+        this.y = target.y
+        this._zoom = target.zoom
+        this.scale.set(this._zoom)
+        this.onZoomChange?.(this._zoom)
         this._animationId = null
+        this._springX = null
+        this._springY = null
+        this._springZoom = null
       }
     }
 
@@ -172,9 +210,16 @@ export class Viewport extends Container {
   }
 
   /**
-   * Reset zoom to 1 and offset to 0.
+   * Reset zoom to 1 and offset to 0, animated with spring physics.
    */
   resetView(): void {
+    this.animateTo({ x: 0, y: 0, zoom: 1 })
+  }
+
+  /**
+   * Reset zoom to 1 and offset to 0, immediately (no animation).
+   */
+  resetViewImmediate(): void {
     this._zoom = 1
     this.scale.set(1)
     this.x = 0
@@ -190,6 +235,9 @@ export class Viewport extends Container {
       cancelAnimationFrame(this._animationId)
       this._animationId = null
     }
+    this._springX = null
+    this._springY = null
+    this._springZoom = null
 
     if (this._canvas && this._onWheel) {
       this._canvas.removeEventListener('wheel', this._onWheel)

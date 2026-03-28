@@ -19,6 +19,7 @@ import { FoldManager } from '../interaction/fold-manager'
 import { mapKeyToAction } from '../interaction/keyboard'
 import { getTheme, type Theme } from './theme'
 import { LinkPreview } from './link-preview'
+import { LayoutAnimator } from './layout-animator'
 
 /**
  * Public API for the mermaid-render engine.
@@ -39,6 +40,7 @@ export class MermaidRenderer {
   private _edgeGraphics: EdgeGraphic[] = []
   private _subgraphContainers = new Map<string, SubgraphContainer>()
   private _currentPhilosophy: string = 'narrative'
+  private _layoutAnimator = new LayoutAnimator()
   private _linkPreview: LinkPreview | null = null
 
   // Focus navigation state
@@ -136,6 +138,9 @@ export class MermaidRenderer {
       this._app.destroy(true, { children: true })
       this._app = null
     }
+
+    // Layout animator
+    this._layoutAnimator.cancel()
 
     // Link preview
     this._linkPreview?.destroy()
@@ -845,9 +850,41 @@ export class MermaidRenderer {
    * Re-run layout on the current graph (after fold changes) and re-render.
    */
   private _relayout(): void {
-    if (!this._graph) return
+    if (!this._graph || !this._viewport || !this._app) return
     const layout = createLayoutEngine(this._currentPhilosophy)
-    this._positioned = layout.compute(this._graph)
-    this._renderGraph(this._positioned)
+    const newPositioned = layout.compute(this._graph)
+
+    // Spring-animate existing nodes to new positions
+    if (this._positioned && this._nodeSprites.size > 0) {
+      const theme = getTheme(this._currentPhilosophy as any)
+      this._layoutAnimator.animateNodes(
+        this._nodeSprites,
+        newPositioned,
+        // Add new node sprites
+        (id: string) => {
+          const node = newPositioned.nodes.get(id)
+          if (!node || !this._viewport) return null
+          const sprite = new NodeSprite(node, theme)
+          this._nodeSprites.set(id, sprite)
+          this._viewport.addChild(sprite)
+          return sprite
+        },
+        // Remove old node sprites
+        (sprite: NodeSprite) => {
+          this._nodeSprites.delete(sprite.data.id)
+          sprite.destroy()
+        },
+        // On complete
+        () => {
+          this._positioned = newPositioned
+          // Re-render edges and subgraphs after animation
+          this._renderGraph(newPositioned)
+        },
+      )
+    } else {
+      // No existing nodes — full re-render
+      this._positioned = newPositioned
+      this._renderGraph(newPositioned)
+    }
   }
 }
