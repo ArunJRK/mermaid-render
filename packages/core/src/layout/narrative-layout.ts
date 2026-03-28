@@ -48,8 +48,8 @@ export class NarrativeLayout implements LayoutEngine {
     const philosophy = options?.philosophy ?? 'narrative'
     this.config = getPhilosophyConfig(philosophy)
     this.multiplier = options?.spacingMultiplier ?? 1.0
-    // Lane width: enough space for a node + generous padding
-    this.laneWidth = (this.config.nodeMinWidth + this.config.nodeSep * 2) * this.multiplier
+    // Lane width: wide enough that nodes in adjacent lanes never overlap
+    this.laneWidth = (this.config.nodeMinWidth * 2 + this.config.nodeSep * 2) * this.multiplier
   }
 
   compute(graph: RenderGraph): PositionedGraph {

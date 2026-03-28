@@ -850,41 +850,26 @@ export class MermaidRenderer {
    * Re-run layout on the current graph (after fold changes) and re-render.
    */
   private _relayout(): void {
-    if (!this._graph || !this._viewport || !this._app) return
+    if (!this._graph || !this._viewport) return
+    this._layoutAnimator.cancel()
+
     const layout = createLayoutEngine(this._currentPhilosophy)
     const newPositioned = layout.compute(this._graph)
+    this._positioned = newPositioned
 
-    // Spring-animate existing nodes to new positions
-    if (this._positioned && this._nodeSprites.size > 0) {
-      const theme = getTheme(this._currentPhilosophy as any)
-      this._layoutAnimator.animateNodes(
-        this._nodeSprites,
-        newPositioned,
-        // Add new node sprites
-        (id: string) => {
-          const node = newPositioned.nodes.get(id)
-          if (!node || !this._viewport) return null
-          const sprite = new NodeSprite(node, theme)
-          this._nodeSprites.set(id, sprite)
-          this._viewport.addChild(sprite)
-          return sprite
-        },
-        // Remove old node sprites
-        (sprite: NodeSprite) => {
-          this._nodeSprites.delete(sprite.data.id)
-          sprite.destroy()
-        },
-        // On complete
-        () => {
-          this._positioned = newPositioned
-          // Re-render edges and subgraphs after animation
-          this._renderGraph(newPositioned)
-        },
-      )
-    } else {
-      // No existing nodes — full re-render
-      this._positioned = newPositioned
-      this._renderGraph(newPositioned)
+    // Quick crossfade: fade out old content, render new, fade in
+    // This keeps everything (nodes + edges + subgraphs) in sync as one organism
+    const vp = this._viewport
+    const startAlpha = vp.alpha
+    vp.alpha = 0.3
+    this._renderGraph(newPositioned)
+    // Fade back in over ~150ms
+    let frame = 0
+    const fadeIn = () => {
+      frame++
+      vp.alpha = 0.3 + 0.7 * Math.min(1, frame / 9) // ~9 frames = 150ms at 60fps
+      if (frame < 9) requestAnimationFrame(fadeIn)
     }
+    requestAnimationFrame(fadeIn)
   }
 }
