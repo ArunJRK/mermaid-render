@@ -324,6 +324,15 @@ async function main() {
 
   renderer.onBreadcrumbChange = updateBreadcrumb
 
+  // Provide preview resolver — parses target file for hover preview
+  renderer.onResolvePreview = async (targetFile: string) => {
+    const source = FILES[targetFile]
+    if (!source) return null
+    const { buildGraph } = await import('../src/parser/graph-builder')
+    const result = await buildGraph(source)
+    return result.success && result.graph ? result.graph : null
+  }
+
   // Handle cross-file link clicks
   renderer.on('link:navigate', (link: any) => {
     const targetFile = link.targetFile as string

@@ -19,6 +19,7 @@ import { FoldManager } from '../interaction/fold-manager'
 import { DagreLayout } from '../layout/dagre-layout'
 import { mapKeyToAction } from '../interaction/keyboard'
 import { getTheme, type Theme } from './theme'
+import { LinkPreview } from './link-preview'
 
 /**
  * Public API for the mermaid-render engine.
@@ -39,12 +40,16 @@ export class MermaidRenderer {
   private _edgeGraphics: EdgeGraphic[] = []
   private _subgraphContainers = new Map<string, SubgraphContainer>()
   private _currentPhilosophy: string = 'narrative'
+  private _linkPreview: LinkPreview | null = null
 
   // Focus navigation state
   private _focusStack: string[] = []
 
   // Breadcrumb callback — the consumer provides a function to update breadcrumb UI
   onBreadcrumbChange: ((segments: Array<{ id: string | null; label: string }>) => void) | null = null
+
+  // Link preview resolver — consumer provides this to load target file graphs for hover preview
+  onResolvePreview: ((targetFile: string) => Promise<RenderGraph | null>) | null = null
 
   // Bound handlers for cleanup
   private _keyHandler: ((e: KeyboardEvent) => void) | null = null
@@ -101,6 +106,9 @@ export class MermaidRenderer {
       else if (action === 'focusOut') this.focusOut()
     }
     window.addEventListener('keydown', this._keyHandler)
+
+    // Link preview popup
+    this._linkPreview = new LinkPreview(canvas.parentElement ?? document.body)
   }
 
   /**
@@ -122,6 +130,10 @@ export class MermaidRenderer {
       this._app.destroy(true, { children: true })
       this._app = null
     }
+
+    // Link preview
+    this._linkPreview?.destroy()
+    this._linkPreview = null
 
     // Event emitter
     this._emitter.removeAll()
@@ -452,6 +464,11 @@ export class MermaidRenderer {
    * Highlight a node and dim unrelated edges.
    */
   selectNode(id: string | null): void {
+    // Toggle: clicking same node deselects it
+    if (id !== null && id === this._selectedNodeId) {
+      id = null
+    }
+
     // Deselect previous
     if (this._selectedNodeId) {
       const prev = this._nodeSprites.get(this._selectedNodeId)
@@ -610,20 +627,38 @@ export class MermaidRenderer {
         this.selectNode(id)
       })
 
-      // Wire badge click — this is the cross-file navigation trigger
+      // Wire badge click + hover preview for linked nodes
       if (hasLink) {
+        const linkDirective = this._graph?.directives.find(
+          (d): d is LinkDirective => d.type === 'link' && d.nodeId === id,
+        )
+
+        // Badge click navigates to the linked file
         sprite.on('badge:click', () => {
-          if (!this._graph) return
-          const link = this._graph.directives.find(
-            (d): d is LinkDirective => d.type === 'link' && d.nodeId === id,
-          )
-          if (link) {
+          this._linkPreview?.hide()
+          if (linkDirective) {
             this._emitter.emit('link:navigate', {
-              targetFile: link.targetFile,
-              targetNode: link.targetNode,
+              targetFile: linkDirective.targetFile,
+              targetNode: linkDirective.targetNode,
               sourceNode: id,
             })
           }
+        })
+
+        // Hover shows wiki-style preview of the target file
+        sprite.on('pointerover', async () => {
+          if (!linkDirective || !this.onResolvePreview || !this._linkPreview) return
+          const theme = getTheme(this._currentPhilosophy as any)
+          const targetGraph = await this.onResolvePreview(linkDirective.targetFile)
+          if (targetGraph) {
+            // Get screen position of the node
+            const bounds = sprite.getBounds()
+            this._linkPreview.show(bounds.right, bounds.y, linkDirective.targetFile, targetGraph, theme)
+          }
+        })
+
+        sprite.on('pointerout', () => {
+          this._linkPreview?.hide()
         })
       }
 
