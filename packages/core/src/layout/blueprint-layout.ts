@@ -179,7 +179,8 @@ export class BlueprintLayout implements LayoutEngine {
 
   private _resolveOverlaps(nodes: Map<string, PositionedNode>): void {
     const nodeList = Array.from(nodes.values())
-    const maxIterations = 10
+    const maxIterations = 20
+    const MIN_MARGIN = GRID_SIZE * 1.5 // minimum gap between any two nodes
 
     for (let iter = 0; iter < maxIterations; iter++) {
       let hasOverlap = false
@@ -189,24 +190,29 @@ export class BlueprintLayout implements LayoutEngine {
           const a = nodeList[i]
           const b = nodeList[j]
 
-          const overlapX = Math.abs(a.x - b.x) < (a.width + b.width) / 2
-          const overlapY = Math.abs(a.y - b.y) < (a.height + b.height) / 2
+          // Check overlap including minimum margin
+          const requiredX = (a.width + b.width) / 2 + MIN_MARGIN
+          const requiredY = (a.height + b.height) / 2 + MIN_MARGIN
+          const overlapX = Math.abs(a.x - b.x) < requiredX
+          const overlapY = Math.abs(a.y - b.y) < requiredY
 
           if (overlapX && overlapY) {
             hasOverlap = true
-            // Offset the second node by one grid cell in the direction of less overlap
-            const overlapAmountX = (a.width + b.width) / 2 - Math.abs(a.x - b.x)
-            const overlapAmountY = (a.height + b.height) / 2 - Math.abs(a.y - b.y)
+            const gapX = requiredX - Math.abs(a.x - b.x)
+            const gapY = requiredY - Math.abs(a.y - b.y)
 
-            if (overlapAmountX <= overlapAmountY) {
-              // Shift horizontally
-              b.x += (b.x >= a.x ? 1 : -1) * GRID_SIZE
+            if (gapX <= gapY) {
+              // Push apart horizontally
+              const pushDir = b.x >= a.x ? 1 : -1
+              const pushAmount = Math.ceil(gapX / GRID_SIZE) * GRID_SIZE
+              b.x += pushDir * Math.max(GRID_SIZE, pushAmount)
             } else {
-              // Shift vertically
-              b.y += (b.y >= a.y ? 1 : -1) * GRID_SIZE
+              // Push apart vertically
+              const pushDir = b.y >= a.y ? 1 : -1
+              const pushAmount = Math.ceil(gapY / GRID_SIZE) * GRID_SIZE
+              b.y += pushDir * Math.max(GRID_SIZE, pushAmount)
             }
 
-            // Re-snap after shift
             b.x = snapToGrid(b.x)
             b.y = snapToGrid(b.y)
           }
