@@ -592,7 +592,7 @@ export class MermaidRenderer {
       this._nodeSprites.set(id, sprite)
       this._viewport.addChild(sprite)
 
-      // Wire click
+      // Wire node click — select only, no navigation
       sprite.on('pointertap', (e: FederatedPointerEvent) => {
         // If this is a collapsed summary node, clicking expands it
         if (node.metadata?._isCollapsedSummary) {
@@ -607,9 +607,13 @@ export class MermaidRenderer {
           originalEvent: e.nativeEvent as Event | undefined,
         }
         this._emitter.emit('node:click', evt)
+        this.selectNode(id)
+      })
 
-        // Check for link directives
-        if (this._graph) {
+      // Wire badge click — this is the cross-file navigation trigger
+      if (hasLink) {
+        sprite.on('badge:click', () => {
+          if (!this._graph) return
           const link = this._graph.directives.find(
             (d): d is LinkDirective => d.type === 'link' && d.nodeId === id,
           )
@@ -620,10 +624,8 @@ export class MermaidRenderer {
               sourceNode: id,
             })
           }
-        }
-
-        this.selectNode(id)
-      })
+        })
+      }
 
       // Wire double-click for fold toggle
       sprite.on('dblclick' as any, (e: any) => {

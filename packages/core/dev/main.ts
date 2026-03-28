@@ -272,13 +272,22 @@ async function loadFile(filePath: string) {
   currentFile = filePath
   const result = await renderer.load(source)
 
-  // Detect layout from the file's directive
+  // Sync layout buttons with the file's declared philosophy
   const layoutMatch = source.match(/%% @layout (\w+)/)
   if (layoutMatch) {
     currentLayout = layoutMatch[1]
   }
 
   applyThemeStyles(currentLayout)
+
+  // Highlight active file button
+  document.querySelectorAll<HTMLButtonElement>('#files button').forEach(btn => {
+    const isActive = btn.getAttribute('data-file') === filePath
+    const s = THEME_STYLES[currentLayout] ?? THEME_STYLES.narrative
+    btn.style.borderColor = isActive ? s.accent : s.border
+    btn.style.color = isActive ? s.accent : s.text
+  })
+
   console.log(`[${filePath}] loaded with ${currentLayout}:`, result.success ? 'OK' : 'FAIL')
 }
 

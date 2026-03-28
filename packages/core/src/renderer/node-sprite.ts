@@ -43,17 +43,42 @@ export class NodeSprite extends Container {
     this._label.anchor.set(0.5)
     this.addChild(this._label)
 
-    // Link badge — small arrow icon at top-right corner indicating "has linked file"
+    // Link badge — interactive icon at top-right indicating "has linked file"
     if (hasLink) {
-      this._linkBadge = new Graphics()
       const bx = node.width / 2 - 6
       const by = -node.height / 2 + 6
-      // Small circle with arrow
-      this._linkBadge.circle(bx, by, 8)
-      this._linkBadge.fill({ color: theme.accent, alpha: 0.9 })
-      // Arrow symbol drawn as lines
-      this._linkBadge.moveTo(bx - 3, by + 2).lineTo(bx, by - 3).lineTo(bx + 3, by + 2)
-      this._linkBadge.stroke({ width: 1.5, color: theme.nodeFill })
+
+      this._linkBadge = new Graphics()
+      this._linkBadge.eventMode = 'static'
+      this._linkBadge.cursor = 'pointer'
+
+      // Draw badge circle + arrow
+      this._drawLinkBadge(bx, by, theme.accent, theme.nodeFill, 1.0)
+
+      // Badge hit area (larger than visual for easier clicking)
+      this._linkBadge.hitArea = {
+        contains: (x: number, y: number) => {
+          const dx = x - bx, dy = y - by
+          return dx * dx + dy * dy <= 14 * 14
+        },
+      }
+
+      // Hover: enlarge badge
+      this._linkBadge.on('pointerover', () => {
+        this._linkBadge!.clear()
+        this._drawLinkBadge(bx, by, theme.accent, theme.nodeFill, 1.3)
+      })
+      this._linkBadge.on('pointerout', () => {
+        this._linkBadge!.clear()
+        this._drawLinkBadge(bx, by, theme.accent, theme.nodeFill, 1.0)
+      })
+
+      // Click badge emits 'badge:click' — renderer wires this to link:navigate
+      this._linkBadge.on('pointertap', (e) => {
+        e.stopPropagation() // don't trigger node click
+        this.emit('badge:click')
+      })
+
       this.addChild(this._linkBadge)
     }
 
@@ -69,6 +94,17 @@ export class NodeSprite extends Container {
     // Hover events
     this.on('pointerover', () => { this._hoverGfx.alpha = 1 })
     this.on('pointerout', () => { if (!this._selected) this._hoverGfx.alpha = 0 })
+  }
+
+  private _drawLinkBadge(bx: number, by: number, accent: number, fill: number, scale: number): void {
+    const g = this._linkBadge!
+    const r = 8 * scale
+    g.circle(bx, by, r)
+    g.fill({ color: accent, alpha: 0.9 })
+    // Arrow-up symbol
+    const s = 3 * scale
+    g.moveTo(bx - s, by + s * 0.6).lineTo(bx, by - s * 0.8).lineTo(bx + s, by + s * 0.6)
+    g.stroke({ width: 1.5 * scale, color: fill })
   }
 
   setSelected(selected: boolean): void {
