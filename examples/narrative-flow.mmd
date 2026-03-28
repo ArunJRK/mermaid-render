@@ -1,0 +1,11 @@
+%% @layout narrative
+graph TD
+    Start[User Opens App] --> Auth{Authenticated?}
+    Auth -->|Yes| Dashboard[Show Dashboard]
+    Auth -->|No| Login[Show Login]
+    Login --> Validate{Valid Credentials?}
+    Validate -->|Yes| Dashboard
+    Validate -->|No| Error[Show Error]
+    Error --> Login
+    Dashboard --> Profile[View Profile]
+    Dashboard --> Settings[App Settings]

@@ -1,0 +1,13 @@
+%% @layout blueprint
+classDiagram
+    class User {
+        +String name
+        +String email
+        +login()
+    }
+    class Post {
+        +String title
+        +String body
+        +publish()
+    }
+    User --> Post : creates

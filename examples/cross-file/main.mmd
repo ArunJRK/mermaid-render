@@ -1,0 +1,5 @@
+%% @link auth -> /examples/cross-file/auth.mmd#loginFlow
+%% @link data -> /examples/cross-file/data.mmd#schema
+graph TD
+    auth[Auth Service] --> data[Data Layer]
+    auth --> cache[Redis Cache]

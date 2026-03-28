@@ -1,0 +1,4 @@
+graph TD
+    loginFlow[Login] --> validate[Validate Credentials]
+    validate --> token[Issue JWT Token]
+    token --> session[Create Session]

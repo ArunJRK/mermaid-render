@@ -1,0 +1,9 @@
+%% @layout map
+graph TD
+    subgraph frontend[Frontend]
+        UI[React App] --> API[API Client]
+    end
+    subgraph backend[Backend]
+        Server[Express] --> DB[(Database)]
+    end
+    API --> Server

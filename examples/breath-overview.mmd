@@ -1,0 +1,7 @@
+%% @layout breath
+graph TD
+    Client[Client App] --> Gateway[API Gateway]
+    Gateway --> Auth[Auth Service]
+    Gateway --> Data[Data Service]
+    Auth --> DB[(User DB)]
+    Data --> DB2[(Content DB)]
