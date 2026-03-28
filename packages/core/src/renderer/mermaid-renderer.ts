@@ -9,14 +9,13 @@ import type {
   LayoutDirective,
 } from '../types'
 import type { FederatedPointerEvent } from 'pixi.js'
-import { LoadPipeline } from './load-pipeline'
+import { LoadPipeline, createLayoutEngine } from './load-pipeline'
 import { EventEmitter } from './event-emitter'
 import { Viewport } from './viewport'
 import { NodeSprite } from './node-sprite'
 import { EdgeGraphic } from './edge-graphic'
 import { SubgraphContainer } from './subgraph-container'
 import { FoldManager } from '../interaction/fold-manager'
-import { DagreLayout } from '../layout/dagre-layout'
 import { mapKeyToAction } from '../interaction/keyboard'
 import { getTheme, type Theme } from './theme'
 import { LinkPreview } from './link-preview'
@@ -225,7 +224,7 @@ export class MermaidRenderer {
     this._graph = graph
     this._foldManager = new FoldManager(graph)
 
-    const layout = new DagreLayout()
+    const layout = createLayoutEngine(this._currentPhilosophy as any)
     this._positioned = layout.compute(graph)
     this._focusStack = []
     this._renderGraph(this._positioned)
@@ -364,7 +363,7 @@ export class MermaidRenderer {
       subgraphs: new Map(), // No subgraphs in focused view
     }
 
-    const layout = new DagreLayout({ philosophy: this._currentPhilosophy as any })
+    const layout = createLayoutEngine(this._currentPhilosophy as any)
     const positioned = layout.compute(miniGraph)
 
     // Clear and render
@@ -811,7 +810,7 @@ export class MermaidRenderer {
    */
   private _relayout(): void {
     if (!this._graph) return
-    const layout = new DagreLayout({ philosophy: this._currentPhilosophy as any })
+    const layout = createLayoutEngine(this._currentPhilosophy as any)
     this._positioned = layout.compute(this._graph)
     this._renderGraph(this._positioned)
   }
