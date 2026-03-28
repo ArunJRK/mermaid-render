@@ -8,10 +8,11 @@ export class NodeSprite extends Container {
   private _gfx: Graphics
   private _hoverGfx: Graphics
   private _label: BitmapText
+  private _linkBadge: Graphics | null = null
   private _selected = false
   private _theme: Theme
 
-  constructor(node: PositionedNode, theme: Theme) {
+  constructor(node: PositionedNode, theme: Theme, hasLink = false) {
     super()
     this.data = node
     this._theme = theme
@@ -41,6 +42,20 @@ export class NodeSprite extends Container {
     })
     this._label.anchor.set(0.5)
     this.addChild(this._label)
+
+    // Link badge — small arrow icon at top-right corner indicating "has linked file"
+    if (hasLink) {
+      this._linkBadge = new Graphics()
+      const bx = node.width / 2 - 6
+      const by = -node.height / 2 + 6
+      // Small circle with arrow
+      this._linkBadge.circle(bx, by, 8)
+      this._linkBadge.fill({ color: theme.accent, alpha: 0.9 })
+      // Arrow symbol drawn as lines
+      this._linkBadge.moveTo(bx - 3, by + 2).lineTo(bx, by - 3).lineTo(bx + 3, by + 2)
+      this._linkBadge.stroke({ width: 1.5, color: theme.nodeFill })
+      this.addChild(this._linkBadge)
+    }
 
     // Hit area
     this.hitArea = {

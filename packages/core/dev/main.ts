@@ -4,7 +4,17 @@ const canvas = document.getElementById('canvas') as HTMLCanvasElement
 const breadcrumbEl = document.getElementById('breadcrumb') as HTMLDivElement
 const renderer = new MermaidRenderer()
 
-const DIAGRAM = `graph TD
+// ── Multi-file diagram registry ─────────────────────────────────────────────
+// Simulates file system — in VS Code extension, these come from real files.
+
+const FILES: Record<string, string> = {
+  '/overview': `%% @layout map
+%% @link OrderSvc -> /order-service#orderFlow
+%% @link PaymentSvc -> /payment-service#paymentFlow
+%% @link Auth -> /auth-service#authFlow
+%% @link NotifSvc -> /notification-service#notifFlow
+
+graph TD
     Client[Web Client] --> Gateway[API Gateway]
     Mobile[Mobile App] --> Gateway
     Gateway --> Auth[Auth Service]
@@ -69,9 +79,103 @@ const DIAGRAM = `graph TD
         Email
         Push
         Queue
-    end`
+    end`,
 
-// Theme colors for dynamic breadcrumb/control styling
+  '/order-service': `%% @layout narrative
+%% @link PaymentSvc -> /payment-service#paymentFlow
+
+graph TD
+    orderFlow[Receive Order] --> validate[Validate Order]
+    validate --> checkStock{Stock Available?}
+    checkStock -->|Yes| reserve[Reserve Items]
+    checkStock -->|No| backorder[Create Backorder]
+    reserve --> calcPrice[Calculate Price]
+    backorder --> notify[Notify Customer]
+    calcPrice --> PaymentSvc[Process Payment]
+    PaymentSvc --> confirm{Payment OK?}
+    confirm -->|Yes| fulfill[Fulfill Order]
+    confirm -->|No| cancel[Cancel & Release Stock]
+    fulfill --> ship[Schedule Shipping]
+    ship --> complete[Order Complete]
+    cancel --> notifyFail[Notify Failure]
+
+    subgraph validation[Order Validation]
+        validate
+        checkStock
+    end
+
+    subgraph processing[Order Processing]
+        reserve
+        calcPrice
+        backorder
+    end
+
+    subgraph fulfillment[Fulfillment]
+        fulfill
+        ship
+        complete
+    end`,
+
+  '/payment-service': `%% @layout blueprint
+
+graph TD
+    paymentFlow[Payment Request] --> authCard[Authorize Card]
+    authCard --> gateway{Gateway Response}
+    gateway -->|Approved| capture[Capture Funds]
+    gateway -->|Declined| retry{Retry?}
+    retry -->|Yes| authCard
+    retry -->|No| fail[Payment Failed]
+    capture --> record[Record Transaction]
+    record --> webhook[Send Webhook]
+    webhook --> done[Payment Complete]
+
+    subgraph stripe[Stripe Integration]
+        authCard
+        capture
+        gateway
+    end
+
+    subgraph internal[Internal Processing]
+        record
+        webhook
+    end`,
+
+  '/auth-service': `%% @layout narrative
+
+graph TD
+    authFlow[Auth Request] --> checkToken{Has Token?}
+    checkToken -->|Yes| validateToken[Validate JWT]
+    checkToken -->|No| login[Login Flow]
+    login --> credentials[Check Credentials]
+    credentials --> mfa{MFA Required?}
+    mfa -->|Yes| sendCode[Send MFA Code]
+    sendCode --> verifyCode[Verify Code]
+    mfa -->|No| issueToken[Issue JWT]
+    verifyCode --> issueToken
+    validateToken --> expired{Token Expired?}
+    expired -->|Yes| refresh[Refresh Token]
+    expired -->|No| authorized[Authorized]
+    refresh --> issueToken
+    issueToken --> authorized
+
+    subgraph authentication[Authentication]
+        login
+        credentials
+        mfa
+        sendCode
+        verifyCode
+    end
+
+    subgraph tokens[Token Management]
+        validateToken
+        expired
+        refresh
+        issueToken
+    end`,
+}
+
+// ── Theme styles ────────────────────────────────────────────────────────────
+
 const THEME_STYLES: Record<string, {
   bg: string; text: string; accent: string; border: string; bodyBg: string
 }> = {
@@ -82,106 +186,151 @@ const THEME_STYLES: Record<string, {
 }
 
 let currentLayout = 'narrative'
+let currentFile = '/overview'
+const fileHistory: string[] = []
+
+// ── UI helpers ──────────────────────────────────────────────────────────────
 
 function applyThemeStyles(layout: string) {
   const s = THEME_STYLES[layout] ?? THEME_STYLES.narrative
-
-  // Breadcrumb bar
   breadcrumbEl.style.background = s.bg
   breadcrumbEl.style.borderColor = s.border
   breadcrumbEl.style.color = s.text
-
-  // Body background
   document.body.style.background = s.bodyBg
 
-  // Control buttons
-  document.querySelectorAll<HTMLButtonElement>('#controls button').forEach(btn => {
+  document.querySelectorAll<HTMLButtonElement>('#controls button[data-layout]').forEach(btn => {
     const isActive = btn.getAttribute('data-layout') === layout
     btn.style.background = s.bg
     btn.style.borderColor = isActive ? s.accent : s.border
     btn.style.color = isActive ? s.accent : s.text
-    btn.classList.toggle('active', isActive)
   })
-}
-
-function createSpan(className: string, text: string, style?: Record<string, string>): HTMLSpanElement {
-  const el = document.createElement('span')
-  el.className = className
-  el.textContent = text
-  if (style) {
-    for (const [k, v] of Object.entries(style)) {
-      el.style.setProperty(k, v)
-    }
-  }
-  return el
 }
 
 function updateBreadcrumb(segments: Array<{ id: string | null; label: string }>) {
   const s = THEME_STYLES[currentLayout] ?? THEME_STYLES.narrative
+  while (breadcrumbEl.firstChild) breadcrumbEl.removeChild(breadcrumbEl.firstChild)
 
-  // Clear existing content
-  while (breadcrumbEl.firstChild) {
-    breadcrumbEl.removeChild(breadcrumbEl.firstChild)
-  }
+  // File path indicator
+  const fileLabel = document.createElement('span')
+  fileLabel.className = 'segment file-label'
+  fileLabel.textContent = currentFile
+  fileLabel.style.color = s.accent
+  fileLabel.style.fontWeight = '600'
+  fileLabel.style.opacity = '0.7'
+  fileLabel.style.marginRight = '12px'
+  breadcrumbEl.appendChild(fileLabel)
 
-  // Build breadcrumb using safe DOM methods
+  // Breadcrumb segments
   segments.forEach((seg, i) => {
     if (i > 0) {
-      const sep = createSpan('separator', '>')
+      const sep = document.createElement('span')
+      sep.className = 'separator'
+      sep.textContent = '>'
       breadcrumbEl.appendChild(sep)
     }
     const isCurrent = i === segments.length - 1
-    const cls = isCurrent ? 'segment current' : 'segment'
-    const segEl = createSpan(cls, seg.label, isCurrent ? { color: s.accent } : undefined)
-    segEl.setAttribute('data-depth', String(i))
-    segEl.addEventListener('click', () => {
-      renderer.focusTo(i)
-    })
-    breadcrumbEl.appendChild(segEl)
+    const el = document.createElement('span')
+    el.className = isCurrent ? 'segment current' : 'segment'
+    el.textContent = seg.label
+    if (isCurrent) el.style.color = s.accent
+    el.addEventListener('click', () => renderer.focusTo(i))
+    breadcrumbEl.appendChild(el)
   })
 
-  // Add the hint
+  // Back button (if we navigated from another file)
+  if (fileHistory.length > 0) {
+    const back = document.createElement('span')
+    back.className = 'segment'
+    back.textContent = '← Back'
+    back.style.marginLeft = '16px'
+    back.style.opacity = '0.6'
+    back.addEventListener('click', () => navigateBack())
+    breadcrumbEl.appendChild(back)
+  }
+
+  // Hint
   const hint = document.createElement('span')
   hint.className = 'hint'
-
-  const escKbd = document.createElement('kbd')
-  escKbd.textContent = 'Esc'
-  hint.appendChild(escKbd)
-  hint.appendChild(document.createTextNode(' zoom out \u00B7 '))
-
-  const fKbd = document.createElement('kbd')
-  fKbd.textContent = 'F'
-  hint.appendChild(fKbd)
-  hint.appendChild(document.createTextNode(' fit \u00B7 '))
-
-  const rKbd = document.createElement('kbd')
-  rKbd.textContent = 'R'
-  hint.appendChild(rKbd)
-  hint.appendChild(document.createTextNode(' reset'))
-
+  const keys = [['Esc', 'back'], ['F', 'fit'], ['R', 'reset']]
+  keys.forEach(([key, label], i) => {
+    if (i > 0) hint.appendChild(document.createTextNode(' · '))
+    const kbd = document.createElement('kbd')
+    kbd.textContent = key
+    hint.appendChild(kbd)
+    hint.appendChild(document.createTextNode(` ${label}`))
+  })
   breadcrumbEl.appendChild(hint)
 }
 
-async function loadWithLayout(layout: string) {
-  currentLayout = layout
-  const source = `%% @layout ${layout}\n${DIAGRAM}`
-  const result = await renderer.load(source)
-  console.log(`[${layout}]`, result.success ? 'OK' : 'FAIL', `${result.graph?.nodes.size ?? 0} nodes, ${result.graph?.subgraphs.size ?? 0} subgraphs`)
+async function loadFile(filePath: string) {
+  const source = FILES[filePath]
+  if (!source) {
+    console.error(`File not found: ${filePath}`)
+    return
+  }
 
-  applyThemeStyles(layout)
+  currentFile = filePath
+  const result = await renderer.load(source)
+
+  // Detect layout from the file's directive
+  const layoutMatch = source.match(/%% @layout (\w+)/)
+  if (layoutMatch) {
+    currentLayout = layoutMatch[1]
+  }
+
+  applyThemeStyles(currentLayout)
+  console.log(`[${filePath}] loaded with ${currentLayout}:`, result.success ? 'OK' : 'FAIL')
 }
+
+function navigateToFile(filePath: string) {
+  fileHistory.push(currentFile)
+  loadFile(filePath)
+}
+
+function navigateBack() {
+  const prev = fileHistory.pop()
+  if (prev) loadFile(prev)
+}
+
+// ── File selector buttons ───────────────────────────────────────────────────
+
+function buildFileButtons() {
+  const container = document.getElementById('files')!
+  for (const path of Object.keys(FILES)) {
+    const btn = document.createElement('button')
+    btn.textContent = path.replace('/', '')
+    btn.setAttribute('data-file', path)
+    btn.addEventListener('click', () => {
+      fileHistory.length = 0 // direct navigation, clear history
+      loadFile(path)
+    })
+    container.appendChild(btn)
+  }
+}
+
+// ── Main ────────────────────────────────────────────────────────────────────
 
 async function main() {
   await renderer.mount(canvas)
 
-  // Wire breadcrumb updates
-  renderer.onBreadcrumbChange = (segments) => {
-    updateBreadcrumb(segments)
-  }
+  renderer.onBreadcrumbChange = updateBreadcrumb
 
-  await loadWithLayout('narrative')
+  // Handle cross-file link clicks
+  renderer.on('link:navigate', (link: any) => {
+    const targetFile = link.targetFile as string
+    console.log('Navigate to:', targetFile)
+    if (FILES[targetFile]) {
+      navigateToFile(targetFile)
+    } else {
+      console.warn(`File not found: ${targetFile}`)
+    }
+  })
 
-  document.querySelectorAll('#controls button').forEach(btn => {
+  buildFileButtons()
+  await loadFile('/overview')
+
+  // Philosophy switcher
+  document.querySelectorAll('#controls button[data-layout]').forEach(btn => {
     btn.addEventListener('click', () => {
       const layout = btn.getAttribute('data-layout')
       if (layout) {
@@ -192,10 +341,9 @@ async function main() {
     })
   })
 
-  renderer.on('node:click', (e) => console.log('Click:', (e as any).nodeId))
-  renderer.on('fold:change', (id, c) => console.log('Fold:', id, c))
-  renderer.on('focus:change', (id, stack) => console.log('Focus:', id, stack))
-  renderer.on('error', (err) => console.error('Error:', err))
+  renderer.on('node:click', (e: any) => console.log('Click:', e.nodeId))
+  renderer.on('fold:change', (id: any, c: any) => console.log('Fold:', id, c))
+  renderer.on('error', (err: any) => console.error('Error:', err))
 }
 
 main().catch(console.error)

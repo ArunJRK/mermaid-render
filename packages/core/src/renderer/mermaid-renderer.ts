@@ -577,9 +577,18 @@ export class MermaidRenderer {
       this._viewport.addChild(eg)
     }
 
+    // Build set of node IDs that have @link directives
+    const linkedNodeIds = new Set<string>()
+    if (this._graph) {
+      for (const d of this._graph.directives) {
+        if (d.type === 'link') linkedNodeIds.add(d.nodeId)
+      }
+    }
+
     // Draw nodes (on top)
     for (const [id, node] of positioned.nodes) {
-      const sprite = new NodeSprite(node, theme)
+      const hasLink = linkedNodeIds.has(id)
+      const sprite = new NodeSprite(node, theme, hasLink)
       this._nodeSprites.set(id, sprite)
       this._viewport.addChild(sprite)
 

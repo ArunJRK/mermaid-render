@@ -8,78 +8,54 @@
     canvas { display: block; width: 100%; height: 100%; }
 
     #breadcrumb {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 36px;
-      z-index: 20;
-      display: flex;
-      align-items: center;
-      padding: 0 16px;
-      background: #0d1117;
-      border-bottom: 1px solid #30363d;
-      font-size: 13px;
-      color: #8b949e;
-      gap: 0;
+      position: fixed; top: 0; left: 0; right: 0; height: 36px; z-index: 20;
+      display: flex; align-items: center; padding: 0 16px;
+      background: #0d1117; border-bottom: 1px solid #30363d;
+      font-size: 13px; color: #8b949e;
       transition: background 0.3s, border-color 0.3s;
     }
-    #breadcrumb .segment {
-      cursor: pointer;
-      padding: 4px 8px;
-      border-radius: 4px;
-      transition: color 0.15s, background 0.15s;
-    }
-    #breadcrumb .segment:hover {
-      background: rgba(255, 255, 255, 0.08);
-    }
-    #breadcrumb .segment.current {
-      color: #58a6ff;
-      font-weight: 600;
-    }
-    #breadcrumb .separator {
-      margin: 0 2px;
-      opacity: 0.4;
-      user-select: none;
-    }
-    #breadcrumb .hint {
-      margin-left: auto;
-      font-size: 11px;
-      opacity: 0.5;
-    }
+    #breadcrumb .segment { cursor: pointer; padding: 4px 8px; border-radius: 4px; transition: color 0.15s, background 0.15s; }
+    #breadcrumb .segment:hover { background: rgba(255, 255, 255, 0.08); }
+    #breadcrumb .segment.current { font-weight: 600; }
+    #breadcrumb .separator { margin: 0 2px; opacity: 0.4; user-select: none; }
+    #breadcrumb .hint { margin-left: auto; font-size: 11px; opacity: 0.5; }
     #breadcrumb .hint kbd {
-      display: inline-block;
-      padding: 1px 5px;
-      border: 1px solid #484f58;
-      border-radius: 3px;
-      background: #161b22;
-      font-family: inherit;
-      font-size: 11px;
+      display: inline-block; padding: 1px 5px; border: 1px solid #484f58;
+      border-radius: 3px; background: #161b22; font-family: inherit; font-size: 11px;
     }
 
-    #controls {
+    #toolbar {
       position: fixed; top: 48px; left: 12px; z-index: 10;
-      display: flex; gap: 6px; flex-wrap: wrap;
+      display: flex; flex-direction: column; gap: 8px;
     }
-    #controls button {
-      padding: 6px 14px; border: 1px solid #30363d; border-radius: 6px;
-      background: #161b22; color: #8b949e; font-size: 13px; cursor: pointer;
+    #controls, #files { display: flex; gap: 6px; flex-wrap: wrap; }
+    #toolbar button {
+      padding: 5px 12px; border: 1px solid #30363d; border-radius: 6px;
+      background: #161b22; color: #8b949e; font-size: 12px; cursor: pointer;
       transition: background 0.2s, border-color 0.2s, color 0.2s;
     }
-    #controls button:hover { background: #21262d; color: #e6edf3; }
-    #controls button.active { background: #161b22; border-color: #58a6ff; color: #58a6ff; }
+    #toolbar button:hover { background: #21262d; color: #e6edf3; }
+    #toolbar label { color: #484f58; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
   </style>
 </head>
 <body>
   <div id="breadcrumb">
     <span class="segment current">Root</span>
-    <span class="hint"><kbd>Esc</kbd> zoom out &middot; <kbd>F</kbd> fit &middot; <kbd>R</kbd> reset</span>
   </div>
-  <div id="controls">
-    <button data-layout="narrative" class="active">Narrative</button>
-    <button data-layout="map">Map</button>
-    <button data-layout="blueprint">Blueprint</button>
-    <button data-layout="breath">Breath</button>
+  <div id="toolbar">
+    <div>
+      <label>Layout</label>
+      <div id="controls">
+        <button data-layout="narrative">Narrative</button>
+        <button data-layout="map">Map</button>
+        <button data-layout="blueprint">Blueprint</button>
+        <button data-layout="breath">Breath</button>
+      </div>
+    </div>
+    <div>
+      <label>Files</label>
+      <div id="files"></div>
+    </div>
   </div>
   <div id="canvas-wrap"><canvas id="canvas"></canvas></div>
   <script type="module" src="./main.ts"></script>
