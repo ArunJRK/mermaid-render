@@ -2,6 +2,25 @@
 
 **Source plan:** `docs/superpowers/plans/2026-03-28-mermaid-render-impl.md`
 **Spec:** `docs/superpowers/specs/2026-03-28-mermaid-render-design.md`
+**BDD features:** `tests/features/*.feature`
+
+---
+
+## TDD + BDD Protocol
+
+**Every chunk follows Red-Green-Refactor:**
+
+1. **RED:** Write failing test(s) derived from BDD feature scenarios
+2. **Verify RED:** Run test, confirm it fails because feature is missing (not typo)
+3. **GREEN:** Write minimal code to pass the test
+4. **Verify GREEN:** Run test, confirm it passes + all other tests still pass
+5. **REFACTOR:** Clean up, then repeat for next scenario
+
+**No production code without a failing test first.** Agents that skip TDD have their work rejected.
+
+**BDD feature files** define the expected behavior in plain language. Each chunk's context brief references the relevant `.feature` file. The agent translates scenarios into vitest unit tests before writing any implementation.
+
+**Exception:** PixiJS visual layer (renderer-pixi chunk) — WebGL code can't run in Node.js. This chunk type-checks only. Its logic is already tested via renderer-logic chunk. The dev harness provides visual verification.
 
 ---
 
@@ -70,20 +89,23 @@ All layout tests pass. `DagreLayout.compute(graph)` returns `PositionedGraph` wi
 
 ## Theme 4: Renderer
 
+**TDD approach:** Separate testable logic from PixiJS visuals. The renderer's logic (scene construction, event routing, fold state, selection state, load cancellation) is tested in Node.js via unit tests. PixiJS visual output is verified in the dev harness.
+
+**BDD features:** `tests/features/renderer.feature`, `tests/features/interaction.feature`
+
 | Task | Description | Chunk | Done When |
 |------|-------------|-------|-----------|
-| 4.1 | Implement `viewport.ts` — zoom (wheel), pan (drag empty space), fitToView, resetView, cleanup method | renderer-core | `pnpm --filter @mermaid-render/core typecheck` → exit 0 |
-| 4.2 | Implement `node-sprite.ts` — rounded rect shapes, Text labels, highlight/select, click events | renderer-core | `pnpm --filter @mermaid-render/core typecheck` → exit 0 |
-| 4.3 | Implement `edge-graphic.ts` — bezier curves, dotted/thick styles, arrow heads, edge labels | renderer-core | `pnpm --filter @mermaid-render/core typecheck` → exit 0 |
-| 4.4 | Implement `subgraph-container.ts` — background rect, label, positioning | renderer-core | `pnpm --filter @mermaid-render/core typecheck` → exit 0 |
-| 4.5 | Implement `mermaid-renderer.ts` — mount, load, loadGraph, clearScene, renderGraph, selectNode, foldNode/unfoldNode, foldAll/unfoldAll, on/off, destroy | renderer-core | `pnpm --filter @mermaid-render/core build` → exit 0 |
-| 4.6 | Create dev harness (`packages/core/dev/index.html` + `dev/main.ts` + `vite.config.ts`) | renderer-harness | `cd packages/core && pnpm dev` → Vite serves at localhost:3000 |
-| 4.7 | Implement `interaction/fold-manager.ts` — toggle, foldAll, unfoldAll, collapseDescendants | renderer-interaction | `pnpm --filter @mermaid-render/core typecheck` → exit 0 |
-| 4.8 | Implement `interaction/keyboard.ts` — F=fitToView, R=resetView on focused canvas | renderer-interaction | `pnpm --filter @mermaid-render/core typecheck` → exit 0 |
-| 4.9 | Wire fold-manager + keyboard into mermaid-renderer. Double-click subgraph header toggles fold. | renderer-interaction | Open dev harness → double-click subgraph → children collapse, re-layout, expand on second double-click |
+| 4.1 | **TDD: Fold Manager** — Write tests for toggle, foldAll, unfoldAll, collapseDescendants. Then implement `interaction/fold-manager.ts`. | renderer-logic | `pnpm --filter @mermaid-render/core test -- fold-manager` → 6/6 PASS |
+| 4.2 | **TDD: Keyboard handler** — Write tests for key→action mapping (F, R, unknown keys). Then implement `interaction/keyboard.ts`. | renderer-logic | `pnpm --filter @mermaid-render/core test -- keyboard` → 3/3 PASS |
+| 4.3 | **TDD: Scene model** — Write tests for scene construction from PositionedGraph: correct number of nodes/edges, selection state changes, event emission (node:click, fold:change, error, warn), off() unsubscription, concurrent load cancellation. Then implement `renderer/scene-model.ts`. | renderer-logic | `pnpm --filter @mermaid-render/core test -- scene-model` → 10+ PASS |
+| 4.4 | **TDD: Load pipeline** — Write integration test: mermaid source string → buildGraph → layout → scene model produces correct node/edge count. Test error path (invalid source → error event + previous graph preserved). Then implement `renderer/load-pipeline.ts`. | renderer-logic | `pnpm --filter @mermaid-render/core test -- load-pipeline` → 4/4 PASS |
+| 4.5 | Implement PixiJS visual layer: `viewport.ts`, `node-sprite.ts`, `edge-graphic.ts`, `subgraph-container.ts` — thin wrappers that read from scene model. | renderer-pixi | `pnpm --filter @mermaid-render/core build` → exit 0 |
+| 4.6 | Implement `mermaid-renderer.ts` — composes scene model + PixiJS layer. Public API delegates to tested logic. | renderer-pixi | `pnpm --filter @mermaid-render/core build` → exit 0 |
+| 4.7 | Create dev harness (`packages/core/dev/index.html` + `dev/main.ts` + `vite.config.ts`) | renderer-harness | `cd packages/core && pnpm dev` → Vite serves at localhost:3000, diagram visible |
+| 4.8 | Wire fold-manager + keyboard into mermaid-renderer. Double-click subgraph header toggles fold. | renderer-pixi | Open dev harness → double-click subgraph → children collapse |
 
 ### Theme 4 Gate
-Open `localhost:3000` → see rendered flowchart with subgraphs. Zoom with wheel, pan by dragging, fold/unfold with double-click, F to fit, R to reset. Nodes are clickable.
+`pnpm --filter @mermaid-render/core test` → ALL PASS (unit tests for fold-manager, keyboard, scene-model, load-pipeline). Dev harness at localhost:3000 renders interactive diagram.
 
 ---
 
@@ -132,11 +154,13 @@ Press F5 in VS Code → Extension Development Host opens. Create a `.mmd` file �
 
 ---
 
-### Chunk: parser-pipeline
+### Chunk: parser-pipeline (TDD)
 **Tasks:** 2.1, 2.2, 2.3, 2.4, 2.5
 **Agent:** SR | Sonnet (integration)
 **Human:** no
+**TDD discipline:** Write failing test → verify RED → implement → verify GREEN → refactor.
 **Context brief:**
+  - Read `tests/features/parsing.feature` — these BDD scenarios define the expected behavior. Translate into vitest tests FIRST.
   - Read `docs/superpowers/plans/2026-03-28-mermaid-render-impl.md` Tasks 3 + 4
   - Read `docs/superpowers/specs/2026-03-28-mermaid-render-design.md` §3.1 Parser Layer, §5 Cross-File Linking, §12 Parser Stability
   - Read `packages/core/src/types.ts` for graph model interfaces
@@ -147,11 +171,13 @@ Press F5 in VS Code → Extension Development Host opens. Create a `.mmd` file �
 
 ---
 
-### Chunk: layout-engine
+### Chunk: layout-engine (TDD)
 **Tasks:** 3.1, 3.2, 3.3
 **Agent:** SR | Sonnet (multi-file)
 **Human:** no
+**TDD discipline:** Write failing test → verify RED → implement → verify GREEN → refactor.
 **Context brief:**
+  - Read `tests/features/layout.feature` — these BDD scenarios define the expected behavior. Translate into vitest tests FIRST.
   - Read `docs/superpowers/plans/2026-03-28-mermaid-render-impl.md` Task 5
   - Read `docs/layout-philosophies/*.md` for spacing/grouping philosophy details
   - Read `docs/superpowers/specs/2026-03-28-mermaid-render-design.md` §3.2 Layout Engine, §6 Node Folding, §15.3 Deep Nesting
@@ -162,48 +188,54 @@ Press F5 in VS Code → Extension Development Host opens. Create a `.mmd` file �
 
 ---
 
-### Chunk: renderer-core
-**Tasks:** 4.1, 4.2, 4.3, 4.4, 4.5
-**Agent:** SR | Opus (arch)
+### Chunk: renderer-logic (TDD)
+**Tasks:** 4.1, 4.2, 4.3, 4.4
+**Agent:** SR | Sonnet (multi-file)
 **Human:** no
+**TDD discipline:** Write failing test → verify RED → implement → verify GREEN → refactor. No production code without a failing test.
 **Context brief:**
-  - Read `docs/superpowers/plans/2026-03-28-mermaid-render-impl.md` Task 6
-  - Read `docs/superpowers/specs/2026-03-28-mermaid-render-design.md` §3.3 Renderer, §3.4 Interaction Model, §10 Error Handling, §11 Performance Strategy
-  - Read PixiJS 8 docs for `Application`, `Container`, `Graphics`, `Text`, `TextStyle` APIs — verify method signatures match plan code
+  - Read `tests/features/renderer.feature` and `tests/features/interaction.feature` — these are the BDD specs to implement as unit tests
+  - Read `docs/superpowers/specs/2026-03-28-mermaid-render-design.md` §3.4 Interaction Model, §6 Node Folding, §10 Error Handling
   - Read `packages/core/src/types.ts` for all interfaces
-  - Read `packages/core/src/parser/graph-builder.ts` for `buildGraph()` API
   - Read `packages/core/src/layout/dagre-layout.ts` for `DagreLayout` API
-**Shared files:** `packages/core/src/renderer/*`, `packages/core/src/index.ts`
-**Rollback:** Delete `packages/core/src/renderer/` directory
-**Done when:** `pnpm --filter @mermaid-render/core build` → exit 0. All renderer files type-check.
+  - Read `packages/core/src/parser/graph-builder.ts` for `buildGraph()` API
+**Shared files:** `packages/core/src/interaction/*`, `packages/core/src/renderer/scene-model.ts`, `packages/core/src/renderer/load-pipeline.ts`
+**Rollback:** Delete `packages/core/src/interaction/` and `packages/core/src/renderer/scene-model.ts`, `packages/core/src/renderer/load-pipeline.ts`
+**Done when:** `pnpm --filter @mermaid-render/core test -- "(fold-manager|keyboard|scene-model|load-pipeline)"` → 20+ tests PASS
+
+Key tests to write (from BDD features):
+- Fold manager: toggle, foldAll, unfoldAll, collapseDescendants, non-existent subgraph
+- Keyboard: F→fitToView, R→resetView, unknown key→no-op
+- Scene model: construct from PositionedGraph, selection state, event emit/unsubscribe, concurrent load cancel
+- Load pipeline: source→graph→layout→scene, error path preserves previous, directive-driven philosophy
+
+---
+
+### Chunk: renderer-pixi
+**Tasks:** 4.5, 4.6, 4.8
+**Agent:** SR | Opus (arch)
+**Human:** approve (manual verification in browser)
+**Context brief:**
+  - Read `docs/superpowers/plans/2026-03-28-mermaid-render-impl.md` Task 6 (PixiJS code)
+  - Read PixiJS 8 docs — verify `Application`, `Container`, `Graphics`, `Text`, `TextStyle` APIs
+  - Read `packages/core/src/renderer/scene-model.ts` — the PixiJS layer reads from this
+  - Read `packages/core/src/renderer/load-pipeline.ts` — the load path
+  - Read `packages/core/src/interaction/fold-manager.ts` and `keyboard.ts` — wire these in
+**Shared files:** `packages/core/src/renderer/viewport.ts`, `packages/core/src/renderer/node-sprite.ts`, `packages/core/src/renderer/edge-graphic.ts`, `packages/core/src/renderer/subgraph-container.ts`, `packages/core/src/renderer/mermaid-renderer.ts`, `packages/core/dev/*`
+**Rollback:** Delete `packages/core/src/renderer/viewport.ts`, `node-sprite.ts`, `edge-graphic.ts`, `subgraph-container.ts`, `mermaid-renderer.ts`, `packages/core/dev/`
+**Done when:** `pnpm --filter @mermaid-render/core build` → exit 0. Dev harness at localhost:3000 renders interactive diagram with fold/unfold and keyboard shortcuts.
 
 ---
 
 ### Chunk: renderer-harness
-**Tasks:** 4.6
+**Tasks:** 4.7
 **Agent:** JR | Haiku (config)
 **Human:** no
 **Context brief:**
-  - Read `docs/superpowers/plans/2026-03-28-mermaid-render-impl.md` Task 7
   - Read `packages/core/src/index.ts` for available exports
-**Shared files:** `packages/core/dev/*`, `packages/core/vite.config.ts`, `packages/core/package.json` (add dev script)
+**Shared files:** `packages/core/dev/*`, `packages/core/vite.config.ts`
 **Rollback:** Delete `packages/core/dev/` and `packages/core/vite.config.ts`
-**Done when:** `cd packages/core && pnpm dev` → Vite starts on localhost:3000 without errors
-
----
-
-### Chunk: renderer-interaction
-**Tasks:** 4.7, 4.8, 4.9
-**Agent:** SR | Sonnet (multi-file)
-**Human:** approve (manual verification of fold/unfold behavior in browser)
-**Context brief:**
-  - Read `docs/superpowers/plans/2026-03-28-mermaid-render-impl.md` Task 8
-  - Read `docs/superpowers/specs/2026-03-28-mermaid-render-design.md` §6 Node Folding, §3.4 Interaction Model
-  - Read `packages/core/src/renderer/mermaid-renderer.ts` — this file must be modified to integrate fold-manager and keyboard
-  - Read `packages/core/src/renderer/node-sprite.ts` — needs dblclick handler wired
-**Shared files:** `packages/core/src/interaction/*`, `packages/core/src/renderer/mermaid-renderer.ts`
-**Rollback:** Delete `packages/core/src/interaction/` and revert mermaid-renderer.ts changes
-**Done when:** Open dev harness → double-click subgraph → children collapse. Press F → fits to view. Press R → resets zoom.
+**Done when:** `cd packages/core && pnpm dev` → Vite starts on localhost:3000
 
 ---
 
@@ -256,12 +288,12 @@ Press F5 in VS Code → Extension Development Host opens. Create a `.mmd` file �
 ```
 parser-pipeline    requires  foundation
 layout-engine      requires  foundation
-renderer-core      requires  parser-pipeline AND layout-engine
-renderer-harness   requires  renderer-core
-renderer-interaction requires renderer-core AND renderer-harness
+renderer-logic     requires  parser-pipeline AND layout-engine
+renderer-pixi      requires  renderer-logic
+renderer-harness   requires  renderer-pixi
 vscode-scaffold    requires  foundation
-vscode-webview     requires  vscode-scaffold AND renderer-core
-integration-verify requires  renderer-interaction AND vscode-webview
+vscode-webview     requires  vscode-scaffold AND renderer-pixi
+integration-verify requires  renderer-harness AND vscode-webview
 ```
 
 ---
@@ -273,19 +305,18 @@ Wave 1: [foundation]
          ↓
 Wave 2: [parser-pipeline || layout-engine || vscode-scaffold]
          ↓
-Wave 3: [renderer-core]
+Wave 3: [renderer-logic]        ← TDD: all logic tests written + passing
          ↓
-Wave 4: [renderer-harness || vscode-webview]
+Wave 4: [renderer-pixi]         ← thin PixiJS layer on top of tested logic
          ↓
-Wave 5: [renderer-interaction]
+Wave 5: [renderer-harness || vscode-webview]    ← 2 parallel
          ↓
 Wave 6: [integration-verify]
 ```
 
 **Max concurrent chunks:** 3 (Wave 2)
-**Total chunks:** 9
-**Estimated context cost:** 9 chunks x ~3K avg = ~27K tokens
-(vs 28 tasks x ~2K = 56K if unchunked)
+**Total chunks:** 10
+**Estimated context cost:** 10 chunks x ~3K avg = ~30K tokens
 
 ---
 
