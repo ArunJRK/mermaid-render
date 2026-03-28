@@ -35,7 +35,9 @@
     }
   },
   "scripts": {
-    "build": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node",
+    "build:webview": "esbuild ./src/webview/webview.ts --bundle --outfile=dist/webview.js --format=iife --platform=browser --target=es2022",
+    "build:extension": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node",
+    "build": "pnpm build:webview && pnpm build:extension",
     "watch": "pnpm build --watch",
     "typecheck": "tsc --noEmit"
   },
