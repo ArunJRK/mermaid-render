@@ -59,8 +59,8 @@ export class DagreLayout implements LayoutEngine {
       }
     }
 
-    // Build the dagre graph
-    const g = new dagre.graphlib.Graph()
+    // Build the dagre graph with compound support for subgraph grouping
+    const g = new dagre.graphlib.Graph({ compound: true })
     const cfg = this.config
     const m = this.multiplier
 
@@ -74,7 +74,24 @@ export class DagreLayout implements LayoutEngine {
     })
     g.setDefaultEdgeLabel(() => ({}))
 
-    // Add visible nodes
+    // Add subgraph group nodes (compound parents) for non-collapsed subgraphs
+    for (const [sgId, sg] of graph.subgraphs) {
+      if (sg.collapsed) continue
+      // Add the subgraph as a compound parent with padding
+      const sgPadding = 30 * m
+      g.setNode(sgId, {
+        label: sg.label,
+        clusterLabelPos: 'top',
+        style: 'fill: none',
+        // Extra padding so children don't overlap the border
+        paddingTop: sgPadding + 20, // room for label
+        paddingBottom: sgPadding,
+        paddingLeft: sgPadding,
+        paddingRight: sgPadding,
+      })
+    }
+
+    // Add visible nodes and assign them to their parent subgraph
     for (const [id, node] of graph.nodes) {
       if (hiddenNodeIds.has(id)) continue
       g.setNode(id, {
@@ -82,6 +99,14 @@ export class DagreLayout implements LayoutEngine {
         width: Math.max(cfg.nodeMinWidth, node.label.length * 8 + cfg.nodePadding * 2),
         height: cfg.nodeMinHeight,
       })
+
+      // Set parent to subgraph if this node belongs to one
+      for (const [sgId, sg] of graph.subgraphs) {
+        if (!sg.collapsed && sg.nodeIds.includes(id)) {
+          g.setParent(id, sgId)
+          break
+        }
+      }
     }
 
     // Add summary nodes for collapsed subgraphs
@@ -108,9 +133,17 @@ export class DagreLayout implements LayoutEngine {
     // Run dagre layout
     dagre.layout(g)
 
-    // Extract positioned nodes
+    // Collect non-collapsed subgraph IDs — these are compound parents, not real nodes
+    const compoundParentIds = new Set<string>()
+    for (const [sgId, sg] of graph.subgraphs) {
+      if (!sg.collapsed) compoundParentIds.add(sgId)
+    }
+
+    // Extract positioned nodes (skip compound parent IDs — they become subgraph visuals)
     const positionedNodes = new Map<string, PositionedNode>()
     for (const nodeId of g.nodes()) {
+      if (compoundParentIds.has(nodeId)) continue // this is a subgraph group, not a node
+
       const dagreNode = g.node(nodeId)
       if (!dagreNode) continue
 
@@ -160,11 +193,10 @@ export class DagreLayout implements LayoutEngine {
       })
     }
 
-    // Compute subgraph bounds for non-collapsed subgraphs
+    // Compute subgraph bounds — dagre compound graph gives us positions for group nodes
     const positionedSubgraphs = new Map<string, PositionedSubgraph>()
     for (const [sgId, sg] of graph.subgraphs) {
       if (sg.collapsed) {
-        // Collapsed subgraph: use the summary node position
         const summaryNode = positionedNodes.get(sgId)
         if (summaryNode) {
           positionedSubgraphs.set(sgId, {
@@ -176,37 +208,39 @@ export class DagreLayout implements LayoutEngine {
           })
         }
       } else {
-        // Compute bounding box from member nodes
-        const memberNodes = sg.nodeIds
-          .map((id) => positionedNodes.get(id))
-          .filter((n): n is PositionedNode => n !== undefined)
-
-        if (memberNodes.length > 0) {
-          const padding = cfg.nodePadding * m
-          let minX = Infinity
-          let minY = Infinity
-          let maxX = -Infinity
-          let maxY = -Infinity
-
-          for (const node of memberNodes) {
-            minX = Math.min(minX, node.x - node.width / 2)
-            minY = Math.min(minY, node.y - node.height / 2)
-            maxX = Math.max(maxX, node.x + node.width / 2)
-            maxY = Math.max(maxY, node.y + node.height / 2)
-          }
-
-          const width = maxX - minX + padding * 2
-          const height = maxY - minY + padding * 2
-          const cx = (minX + maxX) / 2
-          const cy = (minY + maxY) / 2
-
+        // Try dagre's compound node position first
+        const dagreGroup = g.node(sgId)
+        if (dagreGroup && dagreGroup.width > 0) {
           positionedSubgraphs.set(sgId, {
             ...sg,
-            x: cx,
-            y: cy,
-            width,
-            height,
+            x: dagreGroup.x,
+            y: dagreGroup.y,
+            width: dagreGroup.width,
+            height: dagreGroup.height,
           })
+        } else {
+          // Fallback: compute from member positions
+          const memberNodes = sg.nodeIds
+            .map((id) => positionedNodes.get(id))
+            .filter((n): n is PositionedNode => n !== undefined)
+
+          if (memberNodes.length > 0) {
+            const padding = 30 * m
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+            for (const node of memberNodes) {
+              minX = Math.min(minX, node.x - node.width / 2)
+              minY = Math.min(minY, node.y - node.height / 2)
+              maxX = Math.max(maxX, node.x + node.width / 2)
+              maxY = Math.max(maxY, node.y + node.height / 2)
+            }
+            positionedSubgraphs.set(sgId, {
+              ...sg,
+              x: (minX + maxX) / 2,
+              y: (minY + maxY) / 2,
+              width: maxX - minX + padding * 2,
+              height: maxY - minY + padding * 2 + 20, // extra for label
+            })
+          }
         }
       }
     }

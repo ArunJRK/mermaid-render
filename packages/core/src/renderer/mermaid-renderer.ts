@@ -291,10 +291,28 @@ export class MermaidRenderer {
     this._nodeSprites.clear()
     this._edgeGraphics = []
 
-    // Draw subgraphs first (underneath) — wire click to fold/unfold
-    for (const [, sg] of positioned.subgraphs) {
-      const sgc = new SubgraphContainer(sg, theme)
-      const sgId = sg.id
+    // Compute nesting depth for each subgraph (larger subgraphs containing smaller ones = deeper)
+    const sgDepths = new Map<string, number>()
+    const sortedSgs = Array.from(positioned.subgraphs.entries())
+      .sort((a, b) => (b[1].width * b[1].height) - (a[1].width * a[1].height)) // largest first
+    for (const [sgId, sg] of sortedSgs) {
+      let depth = 0
+      for (const [otherId, other] of positioned.subgraphs) {
+        if (otherId === sgId) continue
+        // Check if this subgraph is inside another (center is within bounds)
+        const hw = other.width / 2, hh = other.height / 2
+        if (sg.x > other.x - hw && sg.x < other.x + hw &&
+            sg.y > other.y - hh && sg.y < other.y + hh) {
+          depth++
+        }
+      }
+      sgDepths.set(sgId, depth)
+    }
+
+    // Draw subgraphs — largest (depth 0) first, smallest (deepest) on top. Wire click to fold/unfold.
+    for (const [sgId, sg] of sortedSgs) {
+      const depth = sgDepths.get(sgId) ?? 0
+      const sgc = new SubgraphContainer(sg, theme, depth)
 
       sgc.on('pointertap', () => {
         if (!this._graph?.subgraphs.has(sgId)) return
