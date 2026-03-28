@@ -98,11 +98,27 @@ export class Viewport extends Container {
     const padding = 40
     const scaleX = (cw - padding * 2) / contentWidth
     const scaleY = (ch - padding * 2) / contentHeight
-    this._zoom = Math.min(scaleX, scaleY, MAX_ZOOM)
-    this._zoom = Math.max(this._zoom, MIN_ZOOM)
+    const fitZoom = Math.min(scaleX, scaleY, MAX_ZOOM)
+
+    // Enforce minimum readable zoom — content should never be tiny
+    const MIN_READABLE_ZOOM = 0.5
+    this._zoom = Math.max(fitZoom, MIN_READABLE_ZOOM)
     this.scale.set(this._zoom)
+
+    // Center horizontally
     this.x = (cw - contentWidth * this._zoom) / 2
-    this.y = (ch - contentHeight * this._zoom) / 2
+
+    // Start at the TOP of the diagram, not center
+    // If diagram fits in viewport, center vertically. Otherwise, show from top.
+    const scaledHeight = contentHeight * this._zoom
+    if (scaledHeight <= ch - padding * 2) {
+      // Fits: center vertically
+      this.y = (ch - scaledHeight) / 2
+    } else {
+      // Doesn't fit: start at top with padding
+      this.y = padding
+    }
+
     this.onZoomChange?.(this._zoom)
   }
 
