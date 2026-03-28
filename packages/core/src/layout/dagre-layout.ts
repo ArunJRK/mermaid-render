@@ -115,7 +115,7 @@ export class DagreLayout implements LayoutEngine {
 
     // First, compute the internal size of each subgraph
     const internalLayouts = new Map<string, {
-      graph: ReturnType<typeof this._layoutInternalNodes>
+      graph: { nodes: Map<string, PositionedNode> }
       width: number
       height: number
     }>()
