@@ -517,24 +517,28 @@ export class MermaidRenderer {
     }
 
     // Draw subgraphs — largest (depth 0) first, smallest (deepest) on top.
-    // Single-click = focus navigation, double-click = fold/unfold.
+    // Single-click = fold/unfold (primary). Double-click = isolate/focus (secondary).
     for (const [sgId, sg] of sortedSgs) {
       const depth = sgDepths.get(sgId) ?? 0
       const sgc = new SubgraphContainer(sg, theme, depth)
       this._subgraphContainers.set(sgId, sgc)
 
-      // Single click = focus into subgraph
-      sgc.on('pointertap', () => {
-        if (!this._graph?.subgraphs.has(sgId)) return
-        this.focusSubgraph(sgId)
-      })
-
-      // Double-click = fold/unfold (power user)
+      // Single click = fold/unfold
       let lastTapTime = 0
       sgc.on('pointertap', () => {
         const now = Date.now()
-        if (now - lastTapTime < 300) {
-          // Double-click detected
+        if (now - lastTapTime < 400) {
+          // Double-click = isolate/focus into subgraph
+          if (!this._graph?.subgraphs.has(sgId)) return
+          this.focusSubgraph(sgId)
+          lastTapTime = 0
+          return
+        }
+        lastTapTime = now
+
+        // Delayed single-click = fold/unfold (wait to see if double-click follows)
+        setTimeout(() => {
+          if (lastTapTime !== now) return // double-click happened, skip
           if (!this._graph?.subgraphs.has(sgId)) return
           const sub = this._graph.subgraphs.get(sgId)!
           if (sub.collapsed) {
@@ -542,8 +546,7 @@ export class MermaidRenderer {
           } else {
             this.foldNode(sgId)
           }
-        }
-        lastTapTime = now
+        }, 250) // wait 250ms to distinguish from double-click
       })
 
       this._viewport.addChild(sgc)
