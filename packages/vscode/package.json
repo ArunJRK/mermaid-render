@@ -1,0 +1,50 @@
+{
+  "name": "mermaid-render-vscode",
+  "displayName": "Mermaid Render",
+  "description": "Interactive Mermaid diagram viewer with zoom, fold, and multi-file support",
+  "version": "0.1.0",
+  "publisher": "arunjrk",
+  "engines": { "vscode": "^1.95.0" },
+  "categories": ["Visualization"],
+  "activationEvents": [
+    "onLanguage:mermaid",
+    "workspaceContains:**/*.mmd"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      { "command": "mermaidRender.openPreview", "title": "Mermaid: Open Preview" },
+      { "command": "mermaidRender.foldAll", "title": "Mermaid: Fold All" },
+      { "command": "mermaidRender.unfoldAll", "title": "Mermaid: Unfold All" }
+    ],
+    "keybindings": [
+      { "command": "mermaidRender.openPreview", "key": "ctrl+shift+m", "when": "editorLangId == mermaid" }
+    ],
+    "languages": [
+      { "id": "mermaid", "extensions": [".mmd", ".mermaid"], "aliases": ["Mermaid"] }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        { "id": "mermaid-explorer", "title": "Mermaid", "icon": "$(symbol-structure)" }
+      ]
+    },
+    "views": {
+      "mermaid-explorer": [
+        { "id": "mermaidRender.fileExplorer", "name": "Mermaid Files" }
+      ]
+    }
+  },
+  "scripts": {
+    "build": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node",
+    "watch": "pnpm build --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@mermaid-render/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.95.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.7.0"
+  }
+}
