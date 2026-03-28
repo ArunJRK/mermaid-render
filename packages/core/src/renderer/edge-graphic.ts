@@ -210,12 +210,6 @@ export class EdgeGraphic extends Graphics {
 
     this.stroke({ width: 1.5, color })
 
-    // Junction dots at bend points
-    const JUNCTION_RADIUS = 3
-    this.circle(srcPort.x, midY, JUNCTION_RADIUS)
-    this.circle(tgtPort.x, midY, JUNCTION_RADIUS)
-    this.fill({ color })
-
     // Record orthogonal segments for wire-hop detection
     this.orthogonalSegments = [
       { x1: srcPort.x, y1: srcPort.y, x2: srcPort.x, y2: midY, isHorizontal: false, edgeId: edge.id },
