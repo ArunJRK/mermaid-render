@@ -44,7 +44,9 @@ export class MermaidRenderer {
   private _subgraphContainers = new Map<string, SubgraphContainer>()
   private _currentPhilosophy: string = 'narrative'
   private _layoutAnimator = new LayoutAnimator()
-  private _spineNodeIds: Set<string> = new Set() // Narrative spine for highlight
+  private _spineNodeIds: Set<string> = new Set()
+  private _busGraphics = new Map<string, Graphics>() // Blueprint: source ID → bus graphic
+  private _busSourceIds = new Set<string>() // sources that were merged into bus lines
   private _linkPreview: LinkPreview | null = null
 
   // Focus navigation state
@@ -160,6 +162,8 @@ export class MermaidRenderer {
     this._nodeSprites.clear()
     this._edgeGraphics = []
     this._subgraphContainers.clear()
+    this._busGraphics.clear()
+    this._busSourceIds.clear()
     this._focusStack = []
   }
 
@@ -381,6 +385,8 @@ export class MermaidRenderer {
     this._nodeSprites.clear()
     this._edgeGraphics = []
     this._subgraphContainers.clear()
+    this._busGraphics.clear()
+    this._busSourceIds.clear()
 
     // Edges
     let edgeIdx = 0
@@ -554,6 +560,8 @@ export class MermaidRenderer {
     this._nodeSprites.clear()
     this._edgeGraphics = []
     this._subgraphContainers.clear()
+    this._busGraphics.clear()
+    this._busSourceIds.clear()
 
     // Draw blueprint grid background
     if (isBlueprint && theme.gridColor !== undefined) {
@@ -649,12 +657,11 @@ export class MermaidRenderer {
         if (count >= 2) busSourceIds.add(src)
       }
 
-      const busGraphic = this._drawBlueprintBusLines(positioned, theme)
-      if (busGraphic) {
-        this._viewport.addChild(busGraphic)
-        // Filter out edges that are drawn as bus lines
-        edgesToDraw = positioned.edges.filter(e => !busSourceIds.has(e.source))
-      }
+      this._busSourceIds = busSourceIds
+      this._busGraphics.clear()
+      this._drawBlueprintBusLines(positioned, theme, busSourceIds)
+      // Filter out edges that are drawn as bus lines
+      edgesToDraw = positioned.edges.filter(e => !busSourceIds.has(e.source))
     }
 
     // Draw individual edges
@@ -694,17 +701,23 @@ export class MermaidRenderer {
       this._nodeSprites.set(id, sprite)
       this._viewport.addChild(sprite)
 
-      // Hover: highlight connected edges, dim unrelated
+      // Hover: highlight connected edges + bus lines, dim unrelated
       sprite.on('pointerover', () => {
         for (const eg of this._edgeGraphics) {
           const connected = eg.data.source === id || eg.data.target === id
           eg.alpha = connected ? 1 : 0.15
         }
+        // Also highlight/dim bus graphics
+        for (const [srcId, busGfx] of this._busGraphics) {
+          const targetIds: string[] = (busGfx as any)._targetIds ?? []
+          const connected = srcId === id || targetIds.includes(id)
+          busGfx.alpha = connected ? 1 : 0.15
+        }
       })
       sprite.on('pointerout', () => {
-        // Restore edges unless a node is selected
         if (!this._selectedNodeId) {
           for (const eg of this._edgeGraphics) eg.alpha = 1
+          for (const busGfx of this._busGraphics.values()) busGfx.alpha = 1
         }
       })
 
@@ -952,8 +965,8 @@ export class MermaidRenderer {
    * This prevents multiple parallel wires from the same source port.
    * Returns a Graphics object with the bus lines, or null if no buses needed.
    */
-  private _drawBlueprintBusLines(positioned: PositionedGraph, theme: Theme): Graphics | null {
-    if (!this._graph) return null
+  private _drawBlueprintBusLines(positioned: PositionedGraph, theme: Theme, busSourceIds: Set<string>): void {
+    if (!this._graph || !this._viewport) return
 
     const gridSize = (theme as any).gridSize ?? 20
     const color = theme.edgeColor
@@ -966,20 +979,15 @@ export class MermaidRenderer {
       bySource.set(edge.source, group)
     }
 
-    const busGfx = new Graphics()
-    let drewAny = false
-
     for (const [sourceId, edges] of bySource) {
-      if (edges.length < 2) continue // only bus when 2+ edges from same source
+      if (!busSourceIds.has(sourceId)) continue
 
       const srcNode = positioned.nodes.get(sourceId)
       if (!srcNode) continue
 
-      // Source port: bottom of source node
       const srcPortX = srcNode.x
       const srcPortY = srcNode.y + srcNode.height / 2
 
-      // Find all target ports
       const targets = edges.map(e => {
         const tgt = positioned.nodes.get(e.target)
         return tgt ? { id: e.target, x: tgt.x, y: tgt.y - tgt.height / 2 } : null
@@ -987,32 +995,30 @@ export class MermaidRenderer {
 
       if (targets.length < 2) continue
 
-      // Trunk Y: grid-snapped midpoint between source bottom and nearest target top
       const minTargetY = Math.min(...targets.map(t => t.y))
       const trunkY = Math.round(((srcPortY + minTargetY) / 2) / gridSize) * gridSize
 
-      // Draw trunk: source port → down to trunkY
+      // One Graphics per source so we can highlight individually
+      const busGfx = new Graphics()
       busGfx.moveTo(srcPortX, srcPortY)
       busGfx.lineTo(srcPortX, trunkY)
 
-      // Draw horizontal bus across all targets
       const minX = Math.min(srcPortX, ...targets.map(t => t.x))
       const maxX = Math.max(srcPortX, ...targets.map(t => t.x))
       busGfx.moveTo(minX, trunkY)
       busGfx.lineTo(maxX, trunkY)
 
-      // Draw fan-out: vertical drop from trunkY to each target
       for (const tgt of targets) {
         busGfx.moveTo(tgt.x, trunkY)
         busGfx.lineTo(tgt.x, tgt.y)
       }
 
-      drewAny = true
+      busGfx.stroke({ width: 1.5, color })
+
+      // Store for hover highlighting. Key = sourceId, also store target IDs
+      ;(busGfx as any)._targetIds = targets.map(t => t.id)
+      this._busGraphics.set(sourceId, busGfx)
+      this._viewport.addChild(busGfx)
     }
-
-    if (!drewAny) return null
-
-    busGfx.stroke({ width: 1.5, color })
-    return busGfx
   }
 }
