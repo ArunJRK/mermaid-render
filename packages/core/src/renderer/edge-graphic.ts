@@ -11,9 +11,12 @@ export class EdgeGraphic extends Graphics {
   readonly data: PositionedEdge
   private _labelText: BitmapText | null = null
 
-  constructor(edge: PositionedEdge, theme: Theme, allNodes?: Map<string, PositionedNode>, philosophy?: string) {
+  /**
+   * @param edgeIndex — unique index for this edge, used by Blueprint to offset parallel routes
+   * @param totalEdges — total edges in the graph, used for channel spacing
+   */
+  constructor(edge: PositionedEdge, theme: Theme, allNodes?: Map<string, PositionedNode>, philosophy?: string, edgeIndex = 0, totalEdges = 1) {
     super()
-    // If allNodes provided, apply collision avoidance to the edge points
     if (allNodes) {
       edge = this._applyCollisionAvoidance(edge, allNodes)
     }
@@ -21,7 +24,7 @@ export class EdgeGraphic extends Graphics {
 
     switch (philosophy) {
       case 'blueprint':
-        this._drawOrthogonal(edge, theme)
+        this._drawOrthogonal(edge, theme, edgeIndex, totalEdges)
         break
       case 'breath':
         this._drawWhisper(edge, theme)
@@ -142,7 +145,7 @@ export class EdgeGraphic extends Graphics {
    * Goes horizontal to midpoint x, then vertical to target y, then horizontal to target.
    * Snaps to 20px grid.
    */
-  private _drawOrthogonal(edge: PositionedEdge, theme: Theme): void {
+  private _drawOrthogonal(edge: PositionedEdge, theme: Theme, edgeIndex: number, totalEdges: number): void {
     const points = edge.points
     if (points.length < 2) return
 
@@ -151,14 +154,17 @@ export class EdgeGraphic extends Graphics {
     const color = theme.edgeColor
     const gridSize = (theme as any).gridSize ?? 20
 
-    // Snap midpoint to grid
-    const midY = Math.round(((src.y + tgt.y) / 2) / gridSize) * gridSize
+    // Each edge gets its own horizontal channel offset so wires don't overlap
+    // Spread edges across grid lines around the midpoint
+    const baseMidY = (src.y + tgt.y) / 2
+    const channelOffset = (edgeIndex - totalEdges / 2) * gridSize * 0.6
+    const midY = Math.round((baseMidY + channelOffset) / gridSize) * gridSize
 
     // Route: src → down to midY → across to tgt.x → down to tgt
     this.moveTo(src.x, src.y)
-    this.lineTo(src.x, midY)          // vertical from source
-    this.lineTo(tgt.x, midY)          // horizontal to target column
-    this.lineTo(tgt.x, tgt.y)         // vertical to target
+    this.lineTo(src.x, midY)
+    this.lineTo(tgt.x, midY)
+    this.lineTo(tgt.x, tgt.y)
 
     this.stroke({ width: 1.5, color })
 

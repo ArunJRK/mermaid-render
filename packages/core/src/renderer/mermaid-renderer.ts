@@ -17,6 +17,7 @@ import { EdgeGraphic } from './edge-graphic'
 import { SubgraphContainer } from './subgraph-container'
 import { FoldManager } from '../interaction/fold-manager'
 import { mapKeyToAction } from '../interaction/keyboard'
+import { NarrativeLayout } from '../layout/narrative-layout'
 import { getTheme, type Theme } from './theme'
 import { LinkPreview } from './link-preview'
 import { LayoutAnimator } from './layout-animator'
@@ -41,6 +42,7 @@ export class MermaidRenderer {
   private _subgraphContainers = new Map<string, SubgraphContainer>()
   private _currentPhilosophy: string = 'narrative'
   private _layoutAnimator = new LayoutAnimator()
+  private _spineNodeIds: Set<string> = new Set() // Narrative spine for highlight
   private _linkPreview: LinkPreview | null = null
 
   // Focus navigation state
@@ -379,8 +381,9 @@ export class MermaidRenderer {
     this._subgraphContainers.clear()
 
     // Edges
+    let edgeIdx = 0
     for (const edge of positioned.edges) {
-      const eg = new EdgeGraphic(edge, theme, isBlueprint ? positioned.nodes : undefined, this._currentPhilosophy)
+      const eg = new EdgeGraphic(edge, theme, isBlueprint ? positioned.nodes : undefined, this._currentPhilosophy, edgeIdx, positioned.edges.length); edgeIdx++
       this._edgeGraphics.push(eg)
       this._viewport.addChild(eg)
     }
@@ -632,8 +635,9 @@ export class MermaidRenderer {
     }
 
     // Draw edges — pass all nodes for collision avoidance in Blueprint mode
+    let edgeIdx = 0
     for (const edge of positioned.edges) {
-      const eg = new EdgeGraphic(edge, theme, isBlueprint ? positioned.nodes : undefined, this._currentPhilosophy)
+      const eg = new EdgeGraphic(edge, theme, isBlueprint ? positioned.nodes : undefined, this._currentPhilosophy, edgeIdx, positioned.edges.length); edgeIdx++
       this._edgeGraphics.push(eg)
       this._viewport.addChild(eg)
     }
@@ -743,6 +747,32 @@ export class MermaidRenderer {
     // Re-apply focus dimming if we have an active focus
     if (this._focusStack.length > 0) {
       this._applyFocusDimming()
+    }
+
+    // For Narrative: detect and store spine for hover highlighting
+    this._spineNodeIds.clear()
+    if (this._currentPhilosophy === 'narrative' && this._graph) {
+      const nl = new NarrativeLayout()
+      const spine = nl.detectSpine(this._graph)
+      for (const id of spine) this._spineNodeIds.add(id)
+
+      // Build spine edge set
+      const spineEdgeIds = new Set<string>()
+      for (let i = 0; i < spine.length - 1; i++) {
+        for (const eg of this._edgeGraphics) {
+          if (eg.data.source === spine[i] && eg.data.target === spine[i + 1]) {
+            spineEdgeIds.add(eg.data.id)
+          }
+        }
+      }
+
+      // Dim non-spine elements slightly by default
+      for (const [id, sprite] of this._nodeSprites) {
+        if (!this._spineNodeIds.has(id)) sprite.alpha = 0.7
+      }
+      for (const eg of this._edgeGraphics) {
+        if (!spineEdgeIds.has(eg.data.id)) eg.alpha = 0.4
+      }
     }
   }
 
