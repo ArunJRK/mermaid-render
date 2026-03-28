@@ -6,6 +6,7 @@ import type {
   PositionedGraph,
   NodeEvent,
   LinkDirective,
+  LayoutDirective,
 } from '../types'
 import type { FederatedPointerEvent } from 'pixi.js'
 import { LoadPipeline } from './load-pipeline'
@@ -17,6 +18,7 @@ import { SubgraphContainer } from './subgraph-container'
 import { FoldManager } from '../interaction/fold-manager'
 import { DagreLayout } from '../layout/dagre-layout'
 import { mapKeyToAction } from '../interaction/keyboard'
+import { getTheme, type Theme } from './theme'
 
 /**
  * Public API for the mermaid-render engine.
@@ -35,6 +37,7 @@ export class MermaidRenderer {
   private _selectedNodeId: string | null = null
   private _nodeSprites = new Map<string, NodeSprite>()
   private _edgeGraphics: EdgeGraphic[] = []
+  private _currentPhilosophy: string = 'narrative'
 
   // Bound handlers for cleanup
   private _keyHandler: ((e: KeyboardEvent) => void) | null = null
@@ -143,6 +146,16 @@ export class MermaidRenderer {
       this._graph = result.graph
       this._positioned = result.positioned
       this._foldManager = new FoldManager(result.graph)
+
+      // Detect philosophy from directive or options
+      const layoutDir = result.graph.directives.find((d) => d.type === 'layout') as LayoutDirective | undefined
+      this._currentPhilosophy = (pipelineOpts?.layout ?? layoutDir?.philosophy ?? 'narrative')
+
+      // Update background color to match theme
+      if (this._app) {
+        const theme = getTheme(this._currentPhilosophy as any)
+        this._app.renderer.background.color = theme.background
+      }
 
       this._renderGraph(result.positioned)
 
@@ -271,6 +284,8 @@ export class MermaidRenderer {
   private _renderGraph(positioned: PositionedGraph): void {
     if (!this._viewport) return
 
+    const theme = getTheme(this._currentPhilosophy as any)
+
     // Clear previous children
     this._viewport.removeChildren()
     this._nodeSprites.clear()
@@ -278,7 +293,7 @@ export class MermaidRenderer {
 
     // Draw subgraphs first (underneath) — wire click to fold/unfold
     for (const [, sg] of positioned.subgraphs) {
-      const sgc = new SubgraphContainer(sg)
+      const sgc = new SubgraphContainer(sg, theme)
       const sgId = sg.id
 
       sgc.on('pointertap', () => {
@@ -296,14 +311,14 @@ export class MermaidRenderer {
 
     // Draw edges
     for (const edge of positioned.edges) {
-      const eg = new EdgeGraphic(edge)
+      const eg = new EdgeGraphic(edge, theme)
       this._edgeGraphics.push(eg)
       this._viewport.addChild(eg)
     }
 
     // Draw nodes (on top)
     for (const [id, node] of positioned.nodes) {
-      const sprite = new NodeSprite(node)
+      const sprite = new NodeSprite(node, theme)
       this._nodeSprites.set(id, sprite)
       this._viewport.addChild(sprite)
 

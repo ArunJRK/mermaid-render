@@ -1,145 +1,131 @@
 import { Container, Graphics, BitmapText } from 'pixi.js'
 import type { PositionedNode, NodeShape } from '../types'
 import { ensureFontsInstalled } from './fonts'
+import type { Theme } from './theme'
 
-// ── Palette ────────────────────────────────────────────────────────────────
-
-const FILL_COLOR = 0x1e293b
-const STROKE_COLOR = 0x60a5fa
-const SELECTED_STROKE = 0xfbbf24
-const TEXT_COLOR = 0xf1f5f9
-const STROKE_WIDTH = 2
-const CORNER_RADIUS = 8
-
-/**
- * Visual representation of a single graph node.
- * Extends PixiJS Container so it can be added to the scene graph.
- */
 export class NodeSprite extends Container {
   readonly data: PositionedNode
-
   private _gfx: Graphics
+  private _hoverGfx: Graphics
   private _label: BitmapText
   private _selected = false
+  private _theme: Theme
 
-  constructor(node: PositionedNode) {
+  constructor(node: PositionedNode, theme: Theme) {
     super()
     this.data = node
+    this._theme = theme
 
-    // Position at the node centre (dagre gives centre coords)
     this.x = node.x
     this.y = node.y
 
-    // Make interactive
     this.eventMode = 'static'
     this.cursor = 'pointer'
 
-    // Draw shape
+    // Hover glow (behind everything)
+    this._hoverGfx = new Graphics()
+    this._hoverGfx.alpha = 0
+    this.addChild(this._hoverGfx)
+    this._drawHoverGlow(node.shape, node.width + 12, node.height + 12)
+
+    // Main shape
     this._gfx = new Graphics()
-    this._drawShape(node.shape, node.width, node.height, STROKE_COLOR)
+    this._drawShape(node.shape, node.width, node.height, theme.nodeStroke)
     this.addChild(this._gfx)
 
-    // BitmapText — SDF-based, stays crisp at any zoom level
+    // Label
     ensureFontsInstalled()
     this._label = new BitmapText({
       text: node.label,
-      style: {
-        fontFamily: 'MermaidNode',
-        fontSize: 14,
-      },
+      style: { fontFamily: 'MermaidNode', fontSize: 14 },
     })
     this._label.anchor.set(0.5)
     this.addChild(this._label)
 
-    // Hit area should cover the entire shape
+    // Hit area
     this.hitArea = {
       contains: (x: number, y: number) => {
-        const hw = node.width / 2
-        const hh = node.height / 2
+        const hw = node.width / 2 + 4
+        const hh = node.height / 2 + 4
         return x >= -hw && x <= hw && y >= -hh && y <= hh
       },
     }
+
+    // Hover events
+    this.on('pointerover', () => { this._hoverGfx.alpha = 1 })
+    this.on('pointerout', () => { if (!this._selected) this._hoverGfx.alpha = 0 })
   }
 
-  /** Toggle the selected visual state. */
   setSelected(selected: boolean): void {
     if (this._selected === selected) return
     this._selected = selected
     this._gfx.clear()
     this._drawShape(
-      this.data.shape,
-      this.data.width,
-      this.data.height,
-      selected ? SELECTED_STROKE : STROKE_COLOR,
+      this.data.shape, this.data.width, this.data.height,
+      selected ? this._theme.nodeStrokeSelected : this._theme.nodeStroke,
     )
+    this._hoverGfx.alpha = selected ? 1 : 0
   }
 
-  // ── private ──────────────────────────────────────────────
+  private _drawHoverGlow(shape: NodeShape, w: number, h: number): void {
+    const hw = w / 2
+    const hh = h / 2
+    const g = this._hoverGfx
+
+    if (shape === 'circle') {
+      g.circle(0, 0, Math.max(hw, hh))
+    } else if (shape === 'diamond') {
+      g.moveTo(0, -hh).lineTo(hw, 0).lineTo(0, hh).lineTo(-hw, 0).closePath()
+    } else {
+      g.roundRect(-hw, -hh, w, h, this._theme.cornerRadius + 4)
+    }
+    g.fill({ color: this._theme.hoverGlow, alpha: this._theme.hoverGlowAlpha })
+  }
 
   private _drawShape(shape: NodeShape, w: number, h: number, strokeColor: number): void {
     const hw = w / 2
     const hh = h / 2
     const g = this._gfx
+    const r = this._theme.cornerRadius
 
     switch (shape) {
       case 'diamond':
-        g.moveTo(0, -hh)
-          .lineTo(hw, 0)
-          .lineTo(0, hh)
-          .lineTo(-hw, 0)
-          .closePath()
+        g.moveTo(0, -hh).lineTo(hw, 0).lineTo(0, hh).lineTo(-hw, 0).closePath()
         break
-
       case 'circle':
         g.circle(0, 0, Math.max(hw, hh))
         break
-
       case 'stadium':
         g.roundRect(-hw, -hh, w, h, hh)
         break
-
       case 'hexagon': {
         const inset = hw * 0.25
-        g.moveTo(-hw + inset, -hh)
-          .lineTo(hw - inset, -hh)
-          .lineTo(hw, 0)
-          .lineTo(hw - inset, hh)
-          .lineTo(-hw + inset, hh)
-          .lineTo(-hw, 0)
-          .closePath()
+        g.moveTo(-hw + inset, -hh).lineTo(hw - inset, -hh).lineTo(hw, 0)
+          .lineTo(hw - inset, hh).lineTo(-hw + inset, hh).lineTo(-hw, 0).closePath()
         break
       }
-
-      case 'cylinder':
-        // Simplified: rectangle with rounded top/bottom
-        g.roundRect(-hw, -hh, w, h, CORNER_RADIUS)
+      case 'rounded':
+        g.roundRect(-hw, -hh, w, h, r)
         break
-
       case 'subroutine':
-        // Double-bordered rectangle
         g.rect(-hw, -hh, w, h)
         break
-
-      case 'rounded':
-        g.roundRect(-hw, -hh, w, h, CORNER_RADIUS)
+      case 'cylinder':
+        g.roundRect(-hw, -hh, w, h, r)
         break
-
       case 'rectangle':
       default:
         g.rect(-hw, -hh, w, h)
         break
     }
 
-    g.fill({ color: FILL_COLOR })
-    g.stroke({ width: STROKE_WIDTH, color: strokeColor })
+    g.fill({ color: this._theme.nodeFill })
+    g.stroke({ width: this._theme.strokeWidth, color: strokeColor })
 
-    // Extra inner lines for subroutine
     if (shape === 'subroutine') {
       const inset = 6
-      g.moveTo(-hw + inset, -hh)
-        .lineTo(-hw + inset, hh)
-        .moveTo(hw - inset, -hh)
-        .lineTo(hw - inset, hh)
+      g.moveTo(-hw + inset, -hh).lineTo(-hw + inset, hh)
+        .moveTo(hw - inset, -hh).lineTo(hw - inset, hh)
         .stroke({ width: 1, color: strokeColor })
     }
   }
