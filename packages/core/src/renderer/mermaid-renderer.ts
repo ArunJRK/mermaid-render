@@ -1146,6 +1146,17 @@ export class MermaidRenderer {
         if (dropX !== tgt.x) {
           busSegments.push({ x1: dropX, y1: tgt.y, x2: tgt.x, y2: tgt.y, isHorizontal: true, edgeId: `bus:${sourceId}` })
         }
+
+        // Arrow at fan-out endpoint pointing into target
+        const prevPt = dropX !== tgt.x
+          ? { x: dropX, y: tgt.y }    // horizontal jog: arrow points right/left
+          : { x: dropX, y: busY }     // straight drop: arrow points down
+        const angle = Math.atan2(tgt.y - prevPt.y, tgt.x - prevPt.x)
+        const arrowSize = 6
+        busGfx.moveTo(tgt.x, tgt.y)
+        busGfx.lineTo(tgt.x - arrowSize * Math.cos(angle - Math.PI / 6), tgt.y - arrowSize * Math.sin(angle - Math.PI / 6))
+        busGfx.moveTo(tgt.x, tgt.y)
+        busGfx.lineTo(tgt.x - arrowSize * Math.cos(angle + Math.PI / 6), tgt.y - arrowSize * Math.sin(angle + Math.PI / 6))
       }
 
       busGfx.stroke({ width: 1.5, color })
