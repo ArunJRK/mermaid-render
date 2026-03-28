@@ -219,89 +219,179 @@ export class MermaidRenderer {
    * Focus on a subgraph: zoom/pan viewport to center on it,
    * dim all elements not in the subgraph.
    */
+  /**
+   * Focus into a subgraph: re-layout and re-render showing ONLY that
+   * subgraph's nodes + their internal edges + stubs for external connections.
+   */
   focusSubgraph(id: string): void {
-    if (!this._positioned || !this._graph) return
-    const sg = this._positioned.subgraphs.get(id)
+    if (!this._graph) return
+    const sg = this._graph.subgraphs.get(id)
     if (!sg) return
 
     this._focusStack.push(id)
     this._emitter.emit('focus:change', id, this._focusStack.slice())
-
-    // Animate viewport to center on the subgraph with padding
-    if (this._viewport) {
-      this._viewport.animateToRegion(sg.x, sg.y, sg.width + 40, sg.height + 40, 250)
-    }
-
-    // Dim elements not in the focused subgraph, but make focused children fully visible
-    this._applyFocusDimming()
-
-    // Force detail level to full for focused subgraph contents
-    const focusedSg = this._graph.subgraphs.get(id)
-    if (focusedSg) {
-      for (const nodeId of focusedSg.nodeIds) {
-        const sprite = this._nodeSprites.get(nodeId)
-        if (sprite) {
-          sprite.updateDetailLevel(2) // force full detail
-          sprite.alpha = 1
-        }
-      }
-    }
-
+    this._renderFocusedView()
     this._emitBreadcrumb()
   }
 
   /**
-   * Pop the focus stack and zoom back out.
+   * Pop the focus stack. If empty, return to full graph.
    */
   focusOut(): void {
     if (this._focusStack.length === 0) return
-
     this._focusStack.pop()
     this._emitter.emit('focus:change', null, this._focusStack.slice())
 
     if (this._focusStack.length === 0) {
-      // Back to root — restore all opacities and fit view
-      this._restoreAllOpacities()
-      if (this._viewport && this._positioned) {
-        this._viewport.animatedFitToView(this._positioned.width, this._positioned.height, 300)
+      // Back to root — show full graph
+      if (this._positioned) {
+        this._renderGraph(this._positioned)
       }
     } else {
-      // Focus on the new top of stack
-      const parentId = this._focusStack[this._focusStack.length - 1]
-      const sg = this._positioned?.subgraphs.get(parentId)
-      if (sg && this._viewport) {
-        this._viewport.animateToRegion(sg.x, sg.y, sg.width, sg.height, 300)
-      }
-      this._applyFocusDimming()
+      this._renderFocusedView()
     }
     this._emitBreadcrumb()
   }
 
   /**
-   * Focus to a specific depth in the stack (for breadcrumb clicks).
-   * depth=0 means root (clear focus), depth=1 means first focus, etc.
+   * Focus to a specific depth (for breadcrumb clicks).
    */
   focusTo(depth: number): void {
     while (this._focusStack.length > depth) {
       this._focusStack.pop()
     }
-
     this._emitter.emit('focus:change', null, this._focusStack.slice())
 
     if (this._focusStack.length === 0) {
-      this._restoreAllOpacities()
-      if (this._viewport && this._positioned) {
-        this._viewport.animatedFitToView(this._positioned.width, this._positioned.height, 300)
-      }
+      if (this._positioned) this._renderGraph(this._positioned)
     } else {
-      const currentId = this._focusStack[this._focusStack.length - 1]
-      const sg = this._positioned?.subgraphs.get(currentId)
-      if (sg && this._viewport) {
-        this._viewport.animateToRegion(sg.x, sg.y, sg.width, sg.height, 300)
-      }
-      this._applyFocusDimming()
+      this._renderFocusedView()
     }
     this._emitBreadcrumb()
+  }
+
+  /**
+   * Re-layout and render only the focused subgraph's contents.
+   * External connections shown as stub nodes at the edges.
+   */
+  private _renderFocusedView(): void {
+    if (!this._graph || !this._viewport || this._focusStack.length === 0) return
+
+    const focusedId = this._focusStack[this._focusStack.length - 1]
+    const sg = this._graph.subgraphs.get(focusedId)
+    if (!sg) return
+
+    const theme = getTheme(this._currentPhilosophy as any)
+    const focusedNodeIds = new Set(sg.nodeIds)
+
+    // Build a mini-graph with just this subgraph's nodes
+    const miniNodes = new Map<string, any>()
+    for (const nodeId of sg.nodeIds) {
+      const node = this._graph.nodes.get(nodeId)
+      if (node) miniNodes.set(nodeId, node)
+    }
+
+    // Find external connections and create stub nodes for them
+    const stubNodes = new Map<string, any>()
+    const allEdges: typeof this._graph.edges = []
+
+    for (const edge of this._graph.edges) {
+      const srcIn = focusedNodeIds.has(edge.source)
+      const tgtIn = focusedNodeIds.has(edge.target)
+
+      if (srcIn && tgtIn) {
+        // Internal edge — keep as-is
+        allEdges.push(edge)
+      } else if (srcIn && !tgtIn) {
+        // Outgoing edge — create stub for target
+        const targetNode = this._graph.nodes.get(edge.target)
+        const stubId = `_stub_${edge.target}`
+        if (!stubNodes.has(stubId)) {
+          stubNodes.set(stubId, {
+            id: stubId,
+            label: targetNode?.label ?? edge.target,
+            shape: 'rectangle',
+            metadata: { _isStub: true },
+          })
+        }
+        allEdges.push({ ...edge, target: stubId })
+      } else if (!srcIn && tgtIn) {
+        // Incoming edge — create stub for source
+        const sourceNode = this._graph.nodes.get(edge.source)
+        const stubId = `_stub_${edge.source}`
+        if (!stubNodes.has(stubId)) {
+          stubNodes.set(stubId, {
+            id: stubId,
+            label: sourceNode?.label ?? edge.source,
+            shape: 'rectangle',
+            metadata: { _isStub: true },
+          })
+        }
+        allEdges.push({ ...edge, source: stubId })
+      }
+    }
+
+    // Merge real + stub nodes
+    const combinedNodes = new Map(miniNodes)
+    for (const [id, stub] of stubNodes) {
+      combinedNodes.set(id, stub as any)
+    }
+
+    // Layout just this subset
+    const miniGraph = {
+      ...this._graph,
+      nodes: combinedNodes,
+      edges: allEdges,
+      subgraphs: new Map(), // No subgraphs in focused view
+    }
+
+    const layout = new DagreLayout({ philosophy: this._currentPhilosophy as any })
+    const positioned = layout.compute(miniGraph)
+
+    // Clear and render
+    this._viewport.removeChildren()
+    this._nodeSprites.clear()
+    this._edgeGraphics = []
+    this._subgraphContainers.clear()
+
+    // Edges
+    for (const edge of positioned.edges) {
+      const eg = new EdgeGraphic(edge, theme)
+      this._edgeGraphics.push(eg)
+      this._viewport.addChild(eg)
+    }
+
+    // Nodes
+    for (const [id, node] of positioned.nodes) {
+      const isStub = id.startsWith('_stub_')
+      const sprite = new NodeSprite(node, theme)
+
+      // Stubs are faded
+      if (isStub) {
+        sprite.alpha = 0.4
+      }
+
+      this._nodeSprites.set(id, sprite)
+      this._viewport.addChild(sprite)
+
+      // Click on stub navigates back or to the source subgraph
+      if (!isStub) {
+        sprite.on('pointertap', (e: FederatedPointerEvent) => {
+          this._emitter.emit('node:click', {
+            nodeId: id,
+            eventType: 'click',
+            originalEvent: e.nativeEvent as Event | undefined,
+          })
+          this.selectNode(id)
+        })
+      }
+    }
+
+    // Fit the focused content
+    this.fitToView()
+    if (this._viewport) {
+      this._updateDetailLevel(this._viewport._zoom)
+    }
   }
 
   // ── Fold ─────────────────────────────────────────────────
