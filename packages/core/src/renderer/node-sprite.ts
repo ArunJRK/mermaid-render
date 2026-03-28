@@ -1,5 +1,6 @@
-import { Container, Graphics, Text } from 'pixi.js'
+import { Container, Graphics, BitmapText } from 'pixi.js'
 import type { PositionedNode, NodeShape } from '../types'
+import { ensureFontsInstalled } from './fonts'
 
 // ── Palette ────────────────────────────────────────────────────────────────
 
@@ -18,7 +19,7 @@ export class NodeSprite extends Container {
   readonly data: PositionedNode
 
   private _gfx: Graphics
-  private _label: Text
+  private _label: BitmapText
   private _selected = false
 
   constructor(node: PositionedNode) {
@@ -38,18 +39,14 @@ export class NodeSprite extends Container {
     this._drawShape(node.shape, node.width, node.height, STROKE_COLOR)
     this.addChild(this._gfx)
 
-    // Label — use higher resolution so text stays crisp when zoomed in
-    this._label = new Text({
+    // BitmapText — SDF-based, stays crisp at any zoom level
+    ensureFontsInstalled()
+    this._label = new BitmapText({
       text: node.label,
       style: {
+        fontFamily: 'MermaidNode',
         fontSize: 14,
-        fill: TEXT_COLOR,
-        fontFamily: 'Inter, system-ui, sans-serif',
-        wordWrap: true,
-        wordWrapWidth: node.width - 16,
-        align: 'center',
       },
-      resolution: 4,
     })
     this._label.anchor.set(0.5)
     this.addChild(this._label)

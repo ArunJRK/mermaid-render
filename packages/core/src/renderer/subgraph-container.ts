@@ -1,5 +1,6 @@
-import { Container, Graphics, Text } from 'pixi.js'
+import { Container, Graphics, BitmapText } from 'pixi.js'
 import type { PositionedSubgraph } from '../types'
+import { ensureFontsInstalled } from './fonts'
 
 const BG_COLOR = 0x334155
 const BG_ALPHA = 0.25
@@ -15,7 +16,7 @@ const LABEL_PADDING = 8
 export class SubgraphContainer extends Container {
   readonly data: PositionedSubgraph
   private _bg: Graphics
-  private _label: Text
+  private _label: BitmapText
 
   constructor(subgraph: PositionedSubgraph) {
     super()
@@ -36,16 +37,14 @@ export class SubgraphContainer extends Container {
       .stroke({ width: 1, color: BORDER_COLOR, alpha: 0.5 })
     this.addChild(this._bg)
 
-    // Label at top-left
-    this._label = new Text({
+    // Label at top-left — BitmapText stays crisp at any zoom
+    ensureFontsInstalled()
+    this._label = new BitmapText({
       text: subgraph.label,
       style: {
+        fontFamily: 'MermaidLabel',
         fontSize: 12,
-        fill: LABEL_COLOR,
-        fontFamily: 'Inter, system-ui, sans-serif',
-        fontWeight: 'bold',
       },
-      resolution: 4,
     })
     this._label.x = -hw + LABEL_PADDING
     this._label.y = -hh + LABEL_PADDING

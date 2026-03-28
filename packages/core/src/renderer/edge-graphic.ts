@@ -1,5 +1,6 @@
-import { Graphics, Text } from 'pixi.js'
+import { Graphics, BitmapText } from 'pixi.js'
 import type { PositionedEdge, EdgeStyle } from '../types'
+import { ensureFontsInstalled } from './fonts'
 
 const EDGE_COLOR = 0x94a3b8
 const DIMMED_ALPHA = 0.15
@@ -11,7 +12,7 @@ const ARROW_SIZE = 8
  */
 export class EdgeGraphic extends Graphics {
   readonly data: PositionedEdge
-  private _labelText: Text | null = null
+  private _labelText: BitmapText | null = null
 
   constructor(edge: PositionedEdge) {
     super()
@@ -75,14 +76,13 @@ export class EdgeGraphic extends Graphics {
     // Optional label
     if (edge.label) {
       const mid = this._midpoint(points)
-      this._labelText = new Text({
+      ensureFontsInstalled()
+      this._labelText = new BitmapText({
         text: edge.label,
         style: {
+          fontFamily: 'MermaidEdge',
           fontSize: 11,
-          fill: 0xcbd5e1,
-          fontFamily: 'Inter, system-ui, sans-serif',
         },
-        resolution: 4,
       })
       this._labelText.anchor.set(0.5)
       this._labelText.x = mid.x
