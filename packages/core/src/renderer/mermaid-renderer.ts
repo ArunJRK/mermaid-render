@@ -62,6 +62,8 @@ export class MermaidRenderer {
   async mount(canvas: HTMLCanvasElement): Promise<void> {
     this._canvas = canvas
 
+    // Prefer WebGPU when available (true GPU guarantee), fall back to WebGL
+    const preferWebGPU = typeof navigator !== 'undefined' && 'gpu' in navigator
     const app = new Application()
     await app.init({
       canvas,
@@ -70,8 +72,13 @@ export class MermaidRenderer {
       antialias: true,
       autoDensity: true,
       resolution: window.devicePixelRatio ?? 1,
+      preference: preferWebGPU ? 'webgpu' : 'webgl',
     })
     this._app = app
+
+    // Log which renderer backend is active
+    const rendererType = app.renderer.type === 0x1 ? 'WebGL' : app.renderer.type === 0x2 ? 'WebGPU' : 'Unknown'
+    console.log(`[mermaid-render] GPU backend: ${rendererType}`)
 
     // Create viewport as root container
     const viewport = new Viewport()
