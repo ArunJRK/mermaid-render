@@ -13,39 +13,39 @@ export interface PhilosophyConfig {
 }
 
 const NARRATIVE: PhilosophyConfig = {
-  nodeSep: 50,
-  rankSep: 60,
-  edgeSep: 15,
+  nodeSep: 30,
+  rankSep: 40,
+  edgeSep: 12,
   rankDir: 'TB',
-  marginX: 40,
-  marginY: 40,
-  nodeMinWidth: 120,
-  nodeMinHeight: 40,
-  nodePadding: 12,
-}
-
-const MAP: PhilosophyConfig = {
-  nodeSep: 40,
-  rankSep: 50,
-  edgeSep: 20,
-  rankDir: 'TB',
-  marginX: 60,
-  marginY: 60,
-  nodeMinWidth: 100,
-  nodeMinHeight: 40,
+  marginX: 30,
+  marginY: 30,
+  nodeMinWidth: 160,
+  nodeMinHeight: 48,
   nodePadding: 16,
 }
 
+const MAP: PhilosophyConfig = {
+  nodeSep: 24,
+  rankSep: 30,
+  edgeSep: 14,
+  rankDir: 'TB',
+  marginX: 40,
+  marginY: 40,
+  nodeMinWidth: 160,
+  nodeMinHeight: 48,
+  nodePadding: 18,
+}
+
 const BLUEPRINT: PhilosophyConfig = {
-  nodeSep: 30,
-  rankSep: 40,
+  nodeSep: 20,
+  rankSep: 30,
   edgeSep: 10,
   rankDir: 'TB',
   marginX: 20,
   marginY: 20,
-  nodeMinWidth: 100,
-  nodeMinHeight: 36,
-  nodePadding: 8,
+  nodeMinWidth: 160,
+  nodeMinHeight: 44,
+  nodePadding: 14,
 }
 
 const BREATH: PhilosophyConfig = {
