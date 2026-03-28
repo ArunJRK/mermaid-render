@@ -114,6 +114,39 @@ v2: ELK.js
 v1: Layout runs synchronously on the main thread (dagre on hundreds of nodes < 10ms).
 v2: Layout moves to a web worker when ELK.js is introduced (async, cancellable).
 
+### 3.2.1 Layout Philosophies
+
+Instead of one rigid auto-layout, the engine offers opinionated presets (philosophies) based on Gestalt principles. Each preset configures the layout engine with different spacing, edge routing, grouping, and visual emphasis rules.
+
+Full specs: [docs/layout-philosophies/](../../layout-philosophies/)
+
+| Philosophy | Intent | Gestalt Focus | Default For |
+|------------|--------|---------------|-------------|
+| **Narrative** | Read like a story — clear beginning, middle, end | Continuity, Figure/Ground | Flowcharts, state diagrams |
+| **Map** | See the territory at a glance — scan regions | Proximity, Common Region, Similarity | Info architecture, service maps, C4 Context |
+| **Blueprint** | Precise, technical, aligned — every pixel communicates | Symmetry/Pragnanz, Continuity | Class diagrams, ER diagrams, C4 Component |
+| **Breath** | Space to think — generous whitespace, calm clarity | Figure/Ground, Focal Point | Presentations, stakeholder overviews |
+
+Set via directive:
+```
+%% @layout narrative
+```
+
+Or programmatically:
+```typescript
+renderer.load(source, { layout: 'narrative' })
+```
+
+If unspecified, the engine picks a default based on diagram type.
+
+**Manual overrides** sit on top of any philosophy:
+- `%% @pin nodeId x y` — lock a node in place
+- `%% @rank nodeA nodeB nodeC` — force nodes to same level
+- `%% @spacing 1.5` — global spacing multiplier
+- Drag-to-nudge after auto-layout (position persists until next full re-layout)
+
+The philosophy system is extensible — new philosophies are a configuration preset + a markdown spec file.
+
 ### 3.3 Renderer (PixiJS)
 
 **Input:** Positioned graph
@@ -121,7 +154,7 @@ v2: Layout moves to a web worker when ELK.js is introduced (async, cancellable).
 
 Components:
 - **Viewport container** — handles zoom/pan via wheel and pointer events
-- **Node sprites** — rounded rectangles with Canvas-based text labels (v1), MSDF BitmapText (v2)
+- **Node sprites** — rounded rectangles with MSDF BitmapText labels (crisp at any zoom)
 - **Edge graphics** — bezier curves between nodes, animated on hover
 - **Subgraph containers** — PixiJS Containers that group child nodes (fold = hide container children, show summary)
 - **Cross-file link indicators** — visual badge on linked nodes (click navigates)
@@ -438,17 +471,12 @@ If a future Mermaid parser update breaks our adapter, the pinned version continu
 
 ## 13. Text Rendering Strategy
 
-v1: Use PixiJS Canvas-based text rendering (Text class). This uses an offscreen `<canvas>` to rasterize text and upload as a texture. It handles:
-- Any system font
-- Full Unicode
-- Word wrapping
-- No atlas generation required
+Use PixiJS MSDF BitmapText from v1. PixiJS supports MSDF/SDF fonts natively — no extra library needed.
 
-v2: Migrate high-frequency labels to MSDF BitmapText for better scaling performance. This requires:
-- Pre-generated font atlas for the default font (bundled)
-- Fallback to Canvas text for unsupported glyphs
-
-Canvas text is the pragmatic v1 choice — it works everywhere, handles all characters, and performs fine for hundreds of nodes.
+- Bundle a default font atlas (generated from a standard font like Inter or Roboto via AssetPack)
+- MSDF stays crisp at any zoom level without re-rasterizing
+- Fallback to PixiJS Canvas-based Text for unsupported Unicode glyphs outside the atlas
+- Word wrapping handled by PixiJS BitmapText whiteSpace modes
 
 ## 14. Cross-File Path Resolution
 

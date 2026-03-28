@@ -62,13 +62,70 @@ Mermaid's SVG renderer chokes on large inputs, freezing the entire browser page.
   Default node height and spacing cause complex diagrams to consume excessive space, impairing readability.
   https://github.com/mermaid-js/mermaid/issues/6781
 
+## Layout Quality & Control
+
+Users can't control how diagrams look. No way to adjust spacing, align nodes, choose edge styles, or group items visually. The auto-layout produces cluttered, illegible results with no recourse.
+
+- **#2028 — "Use swimlanes in flowchart diagram"** (open, **392 reactions**)
+  Can't group flows into lanes. Highest-voted layout request.
+  https://github.com/mermaid-js/mermaid/issues/2028
+
+- **#2817 — "Feature request: straight lines"** (open, **124 reactions**)
+  Only curved edges available. Users want straight/orthogonal routing for cleaner diagrams.
+  https://github.com/mermaid-js/mermaid/issues/2817
+
+- **#3723 — "Support specifying that two nodes should be at the same level/rank"** (open, **84 reactions**)
+  No way to align nodes horizontally. Layout decides arbitrarily.
+  https://github.com/mermaid-js/mermaid/issues/3723
+
+- **#2549 — "Right-angle arrows instead of curved"** (open, **74 reactions**)
+  Want orthogonal edge routing for technical diagrams.
+  https://github.com/mermaid-js/mermaid/issues/2549
+
+- **#2977 — "Move subgraph label to bottom left corner"** (open, **71 reactions**)
+  Subgraph labels cover content, no control over placement.
+  https://github.com/mermaid-js/mermaid/issues/2977
+
+- **#1209 — "Subgraph label spacing missing"** (open, **62 reactions**)
+  No padding control around subgraph labels.
+  https://github.com/mermaid-js/mermaid/issues/1209
+
+- **#3806 — "Multiline title overlaps nodes"** (open, **50 reactions**)
+  Long subgraph titles collide with node content.
+  https://github.com/mermaid-js/mermaid/issues/3806
+
+- **#5420 — "Add positioning for elk layout"** (open, **45 reactions**)
+  No horizontal/vertical ordering control in ELK renderer.
+  https://github.com/mermaid-js/mermaid/issues/5420
+
+- **#5653 — "Layout configuration for mindmaps"** (open, **39 reactions**)
+  Mindmap layout has no configuration, resulting in cluttered diagrams.
+  https://github.com/mermaid-js/mermaid/issues/5653
+
+- **#1984 — "Massive whitespace above and below graph"** (open, **39 reactions**)
+  Wasted space makes diagrams hard to embed.
+  https://github.com/mermaid-js/mermaid/issues/1984
+
+- **#270 — "Allow user to designate node position"** (closed, **11 reactions**)
+  Requested since 2015. Never implemented.
+  https://github.com/mermaid-js/mermaid/issues/270
+
+- **#1986 — "Wildly inconsistent spacing and object order"** (open, **5 reactions**)
+  Layout produces unpredictable results.
+  https://github.com/mermaid-js/mermaid/issues/1986
+
 ## Other Relevant Complaints
 
-- Layout issues with C4 diagrams (excessive whitespace)
 - Character encoding bugs in mindmaps
 - No server-side rendering without a browser environment
 - Accessibility: diagrams not accessible to screen readers
 
 ## Conclusion
 
-The pain is real, documented, highly upvoted, and unresolved for years (some since 2018). mermaid-render addresses the top 4 most-requested categories of improvements to Mermaid.
+The pain is real, documented, highly upvoted, and unresolved for years (some since 2015). mermaid-render addresses the top 5 most-requested categories:
+
+1. **Zoom & Pan** — 46+ reactions across multiple issues
+2. **Node Folding** — 23+ reactions
+3. **Multi-File Import** — 32 reactions
+4. **Performance** — page-hanging on large diagrams
+5. **Layout Quality & Control** — **392+ reactions** on the top issue alone, 600+ combined across all layout issues. This is the single biggest pain point in the entire Mermaid project.
