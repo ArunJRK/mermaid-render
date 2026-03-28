@@ -276,9 +276,21 @@ export class MermaidRenderer {
     this._nodeSprites.clear()
     this._edgeGraphics = []
 
-    // Draw subgraphs first (underneath)
+    // Draw subgraphs first (underneath) — wire click to fold/unfold
     for (const [, sg] of positioned.subgraphs) {
       const sgc = new SubgraphContainer(sg)
+      const sgId = sg.id
+
+      sgc.on('pointertap', () => {
+        if (!this._graph?.subgraphs.has(sgId)) return
+        const sub = this._graph.subgraphs.get(sgId)!
+        if (sub.collapsed) {
+          this.unfoldNode(sgId)
+        } else {
+          this.foldNode(sgId)
+        }
+      })
+
       this._viewport.addChild(sgc)
     }
 

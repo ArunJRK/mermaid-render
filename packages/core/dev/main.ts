@@ -3,12 +3,7 @@ import { MermaidRenderer } from '../src/index'
 const canvas = document.getElementById('canvas') as HTMLCanvasElement
 const renderer = new MermaidRenderer()
 
-async function main() {
-  await renderer.mount(canvas)
-
-  const result = await renderer.load(`
-%% @layout narrative
-graph TD
+const DIAGRAM = `graph TD
     A[Start] --> B{Decision}
     B -->|Yes| C[Action 1]
     B -->|No| D[Action 2]
@@ -17,12 +12,34 @@ graph TD
     subgraph processing[Processing Phase]
         C
         D
-    end
-  `)
+    end`
 
-  console.log('Load result:', result)
-  console.log('Nodes:', result.graph ? Array.from(result.graph.nodes.keys()) : 'none')
-  console.log('Subgraphs:', result.graph ? Array.from(result.graph.subgraphs.entries()).map(([k, v]) => `${k}: ${v.label} [${v.nodeIds}]`) : 'none')
+let currentLayout = 'narrative'
+
+async function loadWithLayout(layout: string) {
+  currentLayout = layout
+  const source = `%% @layout ${layout}\n${DIAGRAM}`
+  const result = await renderer.load(source)
+  console.log(`Loaded with ${layout}:`, result.success, result)
+
+  // Update active button
+  document.querySelectorAll('#controls button').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-layout') === layout)
+  })
+}
+
+async function main() {
+  await renderer.mount(canvas)
+
+  await loadWithLayout('narrative')
+
+  // Philosophy switcher buttons
+  document.querySelectorAll('#controls button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const layout = btn.getAttribute('data-layout')
+      if (layout) loadWithLayout(layout)
+    })
+  })
 
   renderer.on('node:click', (e) => {
     console.log('Clicked:', (e as any).nodeId)

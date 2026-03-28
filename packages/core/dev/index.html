@@ -3,11 +3,27 @@
 <head>
   <title>mermaid-render dev</title>
   <style>
-    body { margin: 0; background: #111827; }
+    body { margin: 0; background: #111827; font-family: Inter, system-ui, sans-serif; }
     canvas { width: 100vw; height: 100vh; display: block; }
+    #controls {
+      position: fixed; top: 12px; left: 12px; z-index: 10;
+      display: flex; gap: 6px; flex-wrap: wrap;
+    }
+    #controls button {
+      padding: 6px 14px; border: 1px solid #475569; border-radius: 6px;
+      background: #1e293b; color: #e2e8f0; font-size: 13px; cursor: pointer;
+    }
+    #controls button:hover { background: #334155; }
+    #controls button.active { background: #3b82f6; border-color: #60a5fa; color: #fff; }
   </style>
 </head>
 <body>
+  <div id="controls">
+    <button data-layout="narrative" class="active">Narrative</button>
+    <button data-layout="map">Map</button>
+    <button data-layout="blueprint">Blueprint</button>
+    <button data-layout="breath">Breath</button>
+  </div>
   <canvas id="canvas"></canvas>
   <script type="module" src="./main.ts"></script>
 </body>
