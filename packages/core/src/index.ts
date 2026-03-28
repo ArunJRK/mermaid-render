@@ -1,2 +1,2 @@
-// @mermaid-render/core entry point — placeholder
-export {}
+// Placeholder exports — will be populated as modules are built
+export type * from './types'
