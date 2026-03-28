@@ -731,7 +731,7 @@ export class MermaidRenderer {
    */
   private _relayout(): void {
     if (!this._graph) return
-    const layout = new DagreLayout()
+    const layout = new DagreLayout({ philosophy: this._currentPhilosophy as any })
     this._positioned = layout.compute(this._graph)
     this._renderGraph(this._positioned)
   }
