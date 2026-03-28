@@ -1,67 +1,63 @@
-import { Application, Container, Graphics, BitmapText } from 'pixi.js'
-import type { RenderGraph, PositionedGraph } from '../types'
+import { Container, Graphics, BitmapText } from 'pixi.js'
+import type { Application } from 'pixi.js'
+import type { RenderGraph } from '../types'
 import { DagreLayout } from '../layout/dagre-layout'
 import { ensureFontsInstalled } from './fonts'
 import type { Theme } from './theme'
 
 const PREVIEW_WIDTH = 420
 const PREVIEW_HEIGHT = 280
-const PADDING = 12
+const PADDING = 16
 
 /**
- * Floating wiki-style preview card that appears on hover over linked nodes.
- * Renders a mini version of the target file's diagram.
+ * Wiki-style hover preview rendered INSIDE the main PixiJS app.
+ * Uses a Container overlay — no second WebGL context needed.
  */
 export class LinkPreview {
-  private _container: HTMLDivElement
-  private _canvas: HTMLCanvasElement
-  private _app: Application | null = null
-  private _titleEl: HTMLDivElement
+  private _container: Container
+  private _bg: Graphics
+  private _content: Container
+  private _titleText: BitmapText
   private _visible = false
   private _hoverTimer: ReturnType<typeof setTimeout> | null = null
   private _cache = new Map<string, RenderGraph>()
 
-  constructor(private _parentEl: HTMLElement) {
-    // Create the floating card DOM
-    this._container = document.createElement('div')
-    this._container.style.cssText = `
-      position: fixed; z-index: 100; pointer-events: none;
-      width: ${PREVIEW_WIDTH}px; border-radius: 10px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-      overflow: hidden; opacity: 0;
-      transition: opacity 0.15s ease-out, transform 0.15s ease-out;
-      transform: translateY(4px);
-    `
+  constructor(private _app: Application) {
+    this._container = new Container()
+    this._container.visible = false
+    this._container.eventMode = 'none' // don't intercept clicks
 
-    this._titleEl = document.createElement('div')
-    this._titleEl.style.cssText = `
-      padding: 8px 12px; font-size: 12px; font-weight: 600;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    `
-    this._container.appendChild(this._titleEl)
+    // Background card
+    this._bg = new Graphics()
+    this._container.addChild(this._bg)
 
-    this._canvas = document.createElement('canvas')
-    this._canvas.width = PREVIEW_WIDTH * 2 // retina
-    this._canvas.height = PREVIEW_HEIGHT * 2
-    this._canvas.style.cssText = `width: ${PREVIEW_WIDTH}px; height: ${PREVIEW_HEIGHT}px; display: block;`
-    this._container.appendChild(this._canvas)
+    // Title
+    ensureFontsInstalled()
+    this._titleText = new BitmapText({
+      text: '',
+      style: { fontFamily: 'MermaidLabel', fontSize: 11 },
+    })
+    this._titleText.x = PADDING
+    this._titleText.y = PADDING
+    this._container.addChild(this._titleText)
 
-    this._parentEl.appendChild(this._container)
+    // Content container for the mini diagram
+    this._content = new Container()
+    this._content.y = PADDING + 20 // below title
+    this._content.x = PADDING
+    this._container.addChild(this._content)
+
+    // Add to stage on top of everything
+    this._app.stage.addChild(this._container)
   }
 
-  /**
-   * Show the preview near the given screen coordinates.
-   */
-  /** Cache a resolved graph so hover doesn't re-parse */
   cacheGraph(targetFile: string, graph: RenderGraph): void {
     this._cache.set(targetFile, graph)
   }
 
-  /** Schedule showing preview after a short debounce (300ms) */
   scheduleShow(
-    x: number,
-    y: number,
+    screenX: number,
+    screenY: number,
     targetFile: string,
     resolveGraph: () => Promise<RenderGraph | null>,
     theme: Theme,
@@ -74,7 +70,7 @@ export class LinkPreview {
         if (graph) this._cache.set(targetFile, graph)
       }
       if (graph) {
-        this.show(x, y, targetFile, graph, theme)
+        this._show(screenX, screenY, targetFile, graph, theme)
       }
     }, 300)
   }
@@ -86,110 +82,79 @@ export class LinkPreview {
     }
   }
 
-  async show(
-    x: number,
-    y: number,
-    targetFile: string,
-    graph: RenderGraph,
-    theme: Theme,
-  ): Promise<void> {
-    if (this._visible) return
-    this._visible = true
-
-    // Style the card to match theme
-    this._container.style.background = `rgb(${(theme.nodeFill >> 16) & 0xff}, ${(theme.nodeFill >> 8) & 0xff}, ${theme.nodeFill & 0xff})`
-    this._container.style.border = `1px solid rgb(${(theme.nodeStroke >> 16) & 0xff}, ${(theme.nodeStroke >> 8) & 0xff}, ${theme.nodeStroke & 0xff})`
-    this._titleEl.style.color = `rgb(${(theme.nodeText >> 16) & 0xff}, ${(theme.nodeText >> 8) & 0xff}, ${theme.nodeText & 0xff})`
-    this._titleEl.textContent = targetFile.replace(/^\//, '')
-
-    // Position near the node but not overlapping
-    const viewW = window.innerWidth
-    const viewH = window.innerHeight
-    let left = x + 20
-    let top = y - 40
-    if (left + PREVIEW_WIDTH > viewW - 20) left = x - PREVIEW_WIDTH - 20
-    if (top + PREVIEW_HEIGHT + 40 > viewH - 20) top = viewH - PREVIEW_HEIGHT - 60
-    if (top < 50) top = 50
-
-    this._container.style.left = `${left}px`
-    this._container.style.top = `${top}px`
-
-    // Animate in
-    requestAnimationFrame(() => {
-      this._container.style.opacity = '1'
-      this._container.style.transform = 'translateY(0)'
-    })
-
-    // Render the mini diagram
-    await this._renderMini(graph, theme)
-  }
-
   hide(): void {
     this.cancelSchedule()
     if (!this._visible) return
     this._visible = false
-    this._container.style.opacity = '0'
-    this._container.style.transform = 'translateY(4px)'
+    this._container.visible = false
   }
 
   destroy(): void {
     this.hide()
-    if (this._app) {
-      this._app.destroy(true)
-      this._app = null
-    }
-    this._container.remove()
+    this._container.destroy({ children: true })
   }
 
-  private async _renderMini(graph: RenderGraph, theme: Theme): Promise<void> {
-    // Create or reuse mini PixiJS app
-    if (this._app) {
-      this._app.destroy(true)
-    }
+  private _show(
+    screenX: number,
+    screenY: number,
+    targetFile: string,
+    graph: RenderGraph,
+    theme: Theme,
+  ): void {
+    this._visible = true
+    this._container.visible = true
 
-    this._app = new Application()
-    await this._app.init({
-      canvas: this._canvas,
-      background: theme.background,
-      width: PREVIEW_WIDTH * 2,
-      height: PREVIEW_HEIGHT * 2,
-      antialias: true,
-      resolution: 1,
-    })
+    // Position in screen space (stage coordinates, not world)
+    // The container is added to stage directly, so position = screen pixels
+    const canvasW = this._app.screen.width
+    const canvasH = this._app.screen.height
 
-    // Layout the graph
+    let x = screenX + 20
+    let y = screenY - 20
+    if (x + PREVIEW_WIDTH > canvasW - 20) x = screenX - PREVIEW_WIDTH - 20
+    if (y + PREVIEW_HEIGHT > canvasH - 20) y = canvasH - PREVIEW_HEIGHT - 20
+    if (y < 50) y = 50
+
+    this._container.x = x
+    this._container.y = y
+
+    // Draw background card
+    this._bg.clear()
+    this._bg.roundRect(0, 0, PREVIEW_WIDTH, PREVIEW_HEIGHT, 10)
+    this._bg.fill({ color: theme.nodeFill, alpha: 0.95 })
+    this._bg.stroke({ width: 1, color: theme.nodeStroke })
+
+    // Title
+    this._titleText.text = targetFile.replace(/^\//, '')
+
+    // Clear previous content
+    this._content.removeChildren()
+
+    // Render mini diagram
+    this._renderMini(graph, theme)
+  }
+
+  private _renderMini(graph: RenderGraph, theme: Theme): void {
     const layout = new DagreLayout({ philosophy: 'narrative' })
     const positioned = layout.compute(graph)
 
     if (positioned.nodes.size === 0) return
 
-    // Scale to fit preview canvas
-    const pw = PREVIEW_WIDTH * 2 - PADDING * 4
-    const ph = PREVIEW_HEIGHT * 2 - PADDING * 4
-    const scaleX = pw / (positioned.width || 1)
-    const scaleY = ph / (positioned.height || 1)
-    const scale = Math.min(scaleX, scaleY, 2)
+    // Scale to fit inside the content area
+    const contentW = PREVIEW_WIDTH - PADDING * 2
+    const contentH = PREVIEW_HEIGHT - PADDING * 2 - 20 // minus title
+    const scaleX = contentW / (positioned.width || 1)
+    const scaleY = contentH / (positioned.height || 1)
+    const scale = Math.min(scaleX, scaleY, 1.5)
 
     const root = new Container()
     root.scale.set(scale)
-    root.x = (PREVIEW_WIDTH * 2 - positioned.width * scale) / 2
-    root.y = (PREVIEW_HEIGHT * 2 - positioned.height * scale) / 2
-    this._app.stage.addChild(root)
+    // Center the diagram in the content area
+    root.x = (contentW - positioned.width * scale) / 2
+    root.y = (contentH - positioned.height * scale) / 2
+    this._content.addChild(root)
 
-    // Draw mini edges
-    for (const edge of positioned.edges) {
-      const g = new Graphics()
-      if (edge.points.length >= 2) {
-        g.moveTo(edge.points[0].x, edge.points[0].y)
-        for (let i = 1; i < edge.points.length; i++) {
-          g.lineTo(edge.points[i].x, edge.points[i].y)
-        }
-        g.stroke({ width: 1, color: theme.edgeColor, alpha: 0.6 })
-      }
-      root.addChild(g)
-    }
-
-    // Draw mini subgraphs
+    // Mini subgraphs
     for (const [, sg] of positioned.subgraphs) {
       const g = new Graphics()
       g.roundRect(sg.x - sg.width / 2, sg.y - sg.height / 2, sg.width, sg.height, 4)
@@ -198,20 +163,32 @@ export class LinkPreview {
       root.addChild(g)
     }
 
-    // Draw mini nodes (small dots with optional labels)
+    // Mini edges
+    for (const edge of positioned.edges) {
+      const g = new Graphics()
+      if (edge.points.length >= 2) {
+        g.moveTo(edge.points[0].x, edge.points[0].y)
+        for (let i = 1; i < edge.points.length; i++) {
+          g.lineTo(edge.points[i].x, edge.points[i].y)
+        }
+        g.stroke({ width: 0.8, color: theme.edgeColor, alpha: 0.5 })
+      }
+      root.addChild(g)
+    }
+
+    // Mini nodes
     ensureFontsInstalled()
     for (const [, node] of positioned.nodes) {
       const g = new Graphics()
       g.roundRect(node.x - node.width / 2, node.y - node.height / 2, node.width, node.height, 3)
       g.fill({ color: theme.nodeFill })
-      g.stroke({ width: 1, color: theme.nodeStroke })
+      g.stroke({ width: 0.8, color: theme.nodeStroke })
       root.addChild(g)
 
-      // Mini label (only if scale allows it)
-      if (scale > 0.4) {
+      if (scale > 0.3) {
         const label = new BitmapText({
-          text: node.label.length > 15 ? node.label.slice(0, 13) + '..' : node.label,
-          style: { fontFamily: 'MermaidNode', fontSize: 8 },
+          text: node.label.length > 18 ? node.label.slice(0, 16) + '..' : node.label,
+          style: { fontFamily: 'MermaidNode', fontSize: 7 },
         })
         label.anchor.set(0.5)
         label.x = node.x

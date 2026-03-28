@@ -107,8 +107,8 @@ export class MermaidRenderer {
     }
     window.addEventListener('keydown', this._keyHandler)
 
-    // Link preview popup
-    this._linkPreview = new LinkPreview(canvas.parentElement ?? document.body)
+    // Link preview popup — rendered inside the same PixiJS app (no second WebGL context)
+    this._linkPreview = new LinkPreview(app)
   }
 
   /**
