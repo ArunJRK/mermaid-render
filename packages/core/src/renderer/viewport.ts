@@ -2,7 +2,7 @@ import { Container } from 'pixi.js'
 
 const MIN_ZOOM = 0.1
 const MAX_ZOOM = 5.0
-const ZOOM_FACTOR = 0.001
+const ZOOM_FACTOR = 0.003
 
 export interface ViewportTarget {
   x: number

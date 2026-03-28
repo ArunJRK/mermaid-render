@@ -227,13 +227,26 @@ export class MermaidRenderer {
     this._focusStack.push(id)
     this._emitter.emit('focus:change', id, this._focusStack.slice())
 
-    // Animate viewport to center on the subgraph
+    // Animate viewport to center on the subgraph with padding
     if (this._viewport) {
-      this._viewport.animateToRegion(sg.x, sg.y, sg.width, sg.height, 250)
+      this._viewport.animateToRegion(sg.x, sg.y, sg.width + 40, sg.height + 40, 250)
     }
 
-    // Dim elements not in the focused subgraph
+    // Dim elements not in the focused subgraph, but make focused children fully visible
     this._applyFocusDimming()
+
+    // Force detail level to full for focused subgraph contents
+    const focusedSg = this._graph.subgraphs.get(id)
+    if (focusedSg) {
+      for (const nodeId of focusedSg.nodeIds) {
+        const sprite = this._nodeSprites.get(nodeId)
+        if (sprite) {
+          sprite.updateDetailLevel(2) // force full detail
+          sprite.alpha = 1
+        }
+      }
+    }
+
     this._emitBreadcrumb()
   }
 
@@ -361,6 +374,7 @@ export class MermaidRenderer {
   fitToView(): void {
     if (this._viewport && this._positioned) {
       this._viewport.fitToView(this._positioned.width, this._positioned.height)
+      this._fitZoom = this._viewport._zoom
     }
   }
 
@@ -521,24 +535,37 @@ export class MermaidRenderer {
 
   /**
    * Update semantic zoom detail levels on all elements.
+   * Thresholds are relative to the fitToView zoom (the "default" zoom).
+   * At default zoom everything should be fully visible.
+   * Hiding only kicks in when user zooms OUT beyond the default.
    */
   private _updateDetailLevel(zoom: number): void {
+    // Get the fit zoom as baseline — everything at or above this should show full detail
+    const fitZoom = this._fitZoom ?? 1
+    const relativeZoom = fitZoom > 0 ? zoom / fitZoom : zoom
+
     for (const sprite of this._nodeSprites.values()) {
-      sprite.updateDetailLevel(zoom)
+      sprite.updateDetailLevel(relativeZoom)
     }
     for (const sgc of this._subgraphContainers.values()) {
-      sgc.updateDetailLevel(zoom)
+      sgc.updateDetailLevel(relativeZoom)
     }
-    // Hide edges at very low zoom
+    // Only hide edges when zoomed way out (less than 30% of default)
     for (const eg of this._edgeGraphics) {
-      if (zoom < 0.4) {
+      if (relativeZoom < 0.3) {
         eg.visible = false
+      } else if (relativeZoom < 0.6) {
+        eg.visible = true
+        eg.alpha = (relativeZoom - 0.3) / 0.3
       } else {
         eg.visible = true
-        eg.alpha = zoom < 0.8 ? (zoom - 0.4) / 0.4 : 1
+        eg.alpha = 1
       }
     }
   }
+
+  /** Cached fit-to-view zoom level — used as baseline for semantic zoom */
+  private _fitZoom: number | null = null
 
   /**
    * Apply focus dimming: dim all elements not in the currently focused subgraph.

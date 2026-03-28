@@ -101,22 +101,16 @@ export class SubgraphContainer extends Container {
    * Update visibility of detail elements based on semantic zoom level.
    * @param zoom Current viewport zoom level.
    */
+  /**
+   * zoom is RELATIVE to fitToView (1.0 = default, everything shows).
+   * Subgraph labels always show at default zoom.
+   */
   updateDetailLevel(zoom: number): void {
-    // Chevron and badge visible at zoom > 0.8x
-    const showIndicators = zoom > 0.8
-    this._chevron.visible = showIndicators
-    if (this._badge) this._badge.visible = showIndicators
-
-    // Labels fade out below 0.8x
-    if (zoom < 0.4) {
-      this._label.visible = false
-    } else if (zoom < 0.8) {
-      this._label.visible = true
-      this._label.alpha = (zoom - 0.4) / 0.4
-    } else {
-      this._label.visible = true
-      this._label.alpha = 1
-    }
+    // Labels and indicators always visible at default zoom and above
+    this._label.visible = true
+    this._label.alpha = zoom < 0.4 ? 0.5 : 1
+    this._chevron.visible = zoom >= 0.5
+    if (this._badge) this._badge.visible = zoom >= 0.5
   }
 
   private _drawBg(hw: number, hh: number, hovered: boolean): void {

@@ -71,23 +71,20 @@ export class NodeSprite extends Container {
    * Update visibility of detail elements based on semantic zoom level.
    * @param zoom Current viewport zoom level.
    */
+  /**
+   * Update visibility based on semantic zoom.
+   * zoom is RELATIVE to fitToView (1.0 = default view, everything should show).
+   * Hiding only kicks in below 0.5 (user zoomed out beyond default).
+   */
   updateDetailLevel(zoom: number): void {
-    if (zoom < 0.4) {
-      // Subgraphs-only mode: hide nodes entirely or show as tiny dots
+    if (zoom < 0.3) {
       this._label.visible = false
-      this._gfx.alpha = 0.3
-    } else if (zoom < 0.8) {
-      // Dots mode: show shapes but not labels
+      this._gfx.alpha = 0.4
+    } else if (zoom < 0.6) {
       this._label.visible = false
-      this._gfx.alpha = 0.6 + (zoom - 0.4) * 1.0 // 0.6 to 1.0
-    } else if (zoom < 1.2) {
-      // Fade in labels
-      this._label.visible = true
-      const labelAlpha = (zoom - 0.8) / 0.4 // 0 to 1 across 0.8-1.2
-      this._label.alpha = Math.min(1, Math.max(0, labelAlpha))
-      this._gfx.alpha = 1
+      this._gfx.alpha = 0.6 + (zoom - 0.3) / 0.3 * 0.4
     } else {
-      // Full detail
+      // At default zoom and above: full detail
       this._label.visible = true
       this._label.alpha = 1
       this._gfx.alpha = 1
