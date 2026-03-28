@@ -3,21 +3,77 @@
 <head>
   <title>mermaid-render dev</title>
   <style>
-    body { margin: 0; background: #111827; font-family: Inter, system-ui, sans-serif; }
-    canvas { width: 100vw; height: 100vh; display: block; }
+    body { margin: 0; background: #0d1117; font-family: Inter, system-ui, sans-serif; }
+    canvas { width: 100vw; height: calc(100vh - 36px); display: block; }
+
+    #breadcrumb {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 36px;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      background: #0d1117;
+      border-bottom: 1px solid #30363d;
+      font-size: 13px;
+      color: #8b949e;
+      gap: 0;
+      transition: background 0.3s, border-color 0.3s;
+    }
+    #breadcrumb .segment {
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: color 0.15s, background 0.15s;
+    }
+    #breadcrumb .segment:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+    #breadcrumb .segment.current {
+      color: #58a6ff;
+      font-weight: 600;
+    }
+    #breadcrumb .separator {
+      margin: 0 2px;
+      opacity: 0.4;
+      user-select: none;
+    }
+    #breadcrumb .hint {
+      margin-left: auto;
+      font-size: 11px;
+      opacity: 0.5;
+    }
+    #breadcrumb .hint kbd {
+      display: inline-block;
+      padding: 1px 5px;
+      border: 1px solid #484f58;
+      border-radius: 3px;
+      background: #161b22;
+      font-family: inherit;
+      font-size: 11px;
+    }
+
     #controls {
-      position: fixed; top: 12px; left: 12px; z-index: 10;
+      position: fixed; top: 48px; left: 12px; z-index: 10;
       display: flex; gap: 6px; flex-wrap: wrap;
     }
     #controls button {
-      padding: 6px 14px; border: 1px solid #475569; border-radius: 6px;
-      background: #1e293b; color: #e2e8f0; font-size: 13px; cursor: pointer;
+      padding: 6px 14px; border: 1px solid #30363d; border-radius: 6px;
+      background: #161b22; color: #8b949e; font-size: 13px; cursor: pointer;
+      transition: background 0.2s, border-color 0.2s, color 0.2s;
     }
-    #controls button:hover { background: #334155; }
-    #controls button.active { background: #3b82f6; border-color: #60a5fa; color: #fff; }
+    #controls button:hover { background: #21262d; color: #e6edf3; }
+    #controls button.active { background: #161b22; border-color: #58a6ff; color: #58a6ff; }
   </style>
 </head>
 <body>
+  <div id="breadcrumb">
+    <span class="segment current">Root</span>
+    <span class="hint"><kbd>Esc</kbd> zoom out &middot; <kbd>F</kbd> fit &middot; <kbd>R</kbd> reset</span>
+  </div>
   <div id="controls">
     <button data-layout="narrative" class="active">Narrative</button>
     <button data-layout="map">Map</button>
