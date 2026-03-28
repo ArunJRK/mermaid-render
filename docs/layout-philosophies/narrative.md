@@ -19,7 +19,9 @@ The main path is visually prominent (thicker edges, bolder nodes). Branches rece
 ### Common Fate
 Nodes that are part of the same sequential flow move in the same direction. A top-down flow stays top-down. A left-right flow stays left-right. Direction changes signal a branch, not continuation.
 
-## Layout Rules
+## Layout Algorithm
+
+Dagre + flow lanes. Detect longest path = center lane. Decision nodes split: Yes->right lane, No->left lane. After merge, return to center.
 
 - **Single dominant axis.** The main path flows along one direction (TD or LR). No switching mid-diagram.
 - **Main path detection.** The longest path from entry to exit is the "spine." Layout prioritizes keeping this path straight and centered.
@@ -29,8 +31,8 @@ Nodes that are part of the same sequential flow move in the same direction. A to
 
 ## Edge Routing
 
-- **Straight edges** along the main path. No unnecessary curves.
-- **Right-angle edges** for branches leaving the spine (a clean 90-degree turn signals "leaving the main path").
+Smooth bezier curves following lane direction.
+
 - **Minimal crossings.** Edge crossing is the single biggest readability killer. The layout engine should optimize for fewest crossings even at the cost of extra spacing.
 
 ## Spacing

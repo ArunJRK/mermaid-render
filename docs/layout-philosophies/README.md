@@ -10,6 +10,8 @@ A layout philosophy is an opinionated set of rules for how a diagram should look
 | [Map](map.md) | See the territory at a glance | Information architecture, service maps, system overviews |
 | [Blueprint](blueprint.md) | Precise, technical, aligned | Class diagrams, ER diagrams, C4 component level |
 | [Breath](breath.md) | Space to think | Presentations, stakeholder diagrams, conceptual overviews |
+| [Radial](radial.md) | Mind map, central concept radiates outward | Dependency trees, knowledge graphs, API surface maps |
+| [Mosaic](mosaic.md) | Cards on a wall, no lines | Service catalogs, capability maps, inventories |
 
 ## Usage
 

@@ -22,7 +22,9 @@ Fewer visual elements on screen at once. This philosophy pairs naturally with no
 ### Focal Point
 The most important node (root, entry point, or central concept) is visually emphasized — larger, bolder, more central. Secondary nodes radiate outward with decreasing visual weight. There is a clear "start here."
 
-## Layout Rules
+## Layout Algorithm
+
+Same dagre but 3-4x spacing multiplier. Node minimum 200x60. Font 18px.
 
 - **Center the focal node.** The most connected or explicitly marked root node sits at the visual center.
 - **Radiate outward.** Connected nodes spread outward from center. Not a strict radial layout — more of a "gravitational pull" that keeps the center important.
@@ -32,10 +34,15 @@ The most important node (root, entry point, or central concept) is visually emph
 
 ## Edge Routing
 
-- **Gentle curves.** Soft bezier curves between nodes. No right angles — the feel is organic, approachable.
+1px thin lines, 0.3 opacity — "whisper lines". Barely visible.
+
 - **Minimal edges visible.** If a node has many connections, show only the most important by default. Others appear on hover or selection.
 - **No edge labels by default.** Labels add clutter. Show them on hover or when the user selects an edge. Exception: if a label is critical to understanding (like "authenticates" vs "reads from"), it stays.
 - **Consistent edge weight.** All edges are the same thickness and style. No visual hierarchy among connections — the hierarchy is in the nodes.
+
+## Visual Identity
+
+Maximum whitespace. Designed for projection/sharing. Readable from across the room.
 
 ## Spacing
 

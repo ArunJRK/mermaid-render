@@ -22,7 +22,9 @@ Nodes of the same type look the same across the entire diagram. A service is alw
 ### Enclosure
 Subgraphs are real visual containers, not just labels. They have padding, distinct backgrounds, and clear edges. Nested subgraphs use progressively subtle styling to show depth without clutter.
 
-## Layout Rules
+## Layout Algorithm
+
+Force-directed via d3-force (~30KB). Node attraction (connected pull), node repulsion (all push apart), cluster gravity (same subgraph -> group center). Simulation runs ~2s then freezes. Can enable "breathing" mode where simulation stays alive.
 
 - **Groups first, nodes second.** Layout starts by positioning groups (subgraphs) relative to each other. Then nodes within each group are laid out independently. This prevents a single group's internal complexity from distorting the overall map.
 - **Grid alignment between groups.** Groups snap to an implicit grid. This creates order at the macro level even if individual groups have organic internal layouts.
@@ -32,7 +34,8 @@ Subgraphs are real visual containers, not just labels. They have padding, distin
 
 ## Edge Routing
 
-- **Straight lines between groups.** Long inter-group edges should be direct, not routed through other groups.
+Curved lines, naturally avoid crossing due to force positioning. Edge bundling between clusters.
+
 - **Curved edges within groups.** Softer curves within a group feel organic and help distinguish from the straighter inter-group connections.
 - **Edge bundling.** When multiple edges leave one group heading to the same target group, bundle them visually. Three lines becoming one line says "these things all talk to that region."
 

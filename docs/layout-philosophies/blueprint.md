@@ -22,20 +22,27 @@ Edges follow straight, predictable paths. Orthogonal routing (right angles only)
 ### Closure
 Related attributes or methods within a node are visually complete — bordered sections, dividing lines. A class node with properties and methods has clear internal structure, not just a blob of text.
 
-## Layout Rules
+## Layout Algorithm
+
+Dagre with grid snapping. Nodes align to 20px grid positions after dagre layout.
 
 - **Strict rank alignment.** Nodes at the same hierarchical depth share a baseline. If `User` and `Account` are both one level below `System`, they are at exactly the same Y-coordinate (in TD) or X-coordinate (in LR). No exceptions.
-- **Column/row snapping.** Nodes align to an implicit grid. This creates visual columns (in TD layouts) or rows (in LR layouts) that the eye can scan.
+- **Column/row snapping.** Nodes align to the 20px grid. This creates visual columns (in TD layouts) or rows (in LR layouts) that the eye can scan.
 - **Inheritance flows one direction.** Parent-child relationships (extends, implements) always flow in the primary direction. No backtracking.
 - **Associations are horizontal.** Peer relationships (has-a, uses, references) are laid out horizontally between nodes at the same rank when possible.
 - **Compact packing.** Minimize wasted space. Nodes should be close enough that relationships are obvious, but with enough gap that edges don't overlap nodes.
 
 ## Edge Routing
 
-- **Orthogonal only.** All edges use right-angle routing. No curves, no diagonals. Every segment is horizontal or vertical.
+Straight lines with diagonal allowed. Physics-based collision detection — if line would pass through a node, route around with small offset.
+
 - **Port-based attachment.** Edges attach to specific ports on node borders (top, bottom, left, right), not to the nearest point. This creates predictable, clean connections.
 - **Edge labels centered on segments.** Relationship labels (1..*, belongs_to, extends) sit on the horizontal or vertical segment of the edge, never at an angle.
 - **No edge crossings when possible.** Reorder nodes within a rank to minimize crossings. When crossings are unavoidable, add a small gap at the crossing point for clarity.
+
+## Visual Identity
+
+Blueprint blue background (#001a33), grid lines (#003366 at 20px intervals), monospace font (JetBrains Mono / Fira Code via BitmapFont), nodes #004080, text white. Isometric feel.
 
 ## Spacing
 
@@ -70,3 +77,5 @@ Related attributes or methods within a node are visually complete — bordered s
 ```mermaid
 %% @layout blueprint
 ```
+
+Directive: `%% @layout blueprint`
