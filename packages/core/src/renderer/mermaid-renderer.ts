@@ -412,7 +412,7 @@ export class MermaidRenderer {
     // Draw edges — pass all nodes for Blueprint collision avoidance
     let edgeIdx = 0
     for (const edge of edgesToRender) {
-      const eg = new EdgeGraphic(edge, theme, positioned.nodes, this._currentPhilosophy, edgeIdx, edgesToRender.length); edgeIdx++
+      const eg = new EdgeGraphic(edge, theme, positioned.nodes, this._currentPhilosophy, edgeIdx, edgesToRender.length, undefined, wireReg); edgeIdx++
       this._edgeGraphics.push(eg)
       this._viewport.addChild(eg)
     }
@@ -676,10 +676,14 @@ export class MermaidRenderer {
       this._viewport.addChild(sgc)
     }
 
-    // Blueprint: merge edges from same source into bus/trunk lines
+    // Blueprint: create wire registry, draw bus lines, filter edges
     let edgesToDraw = positioned.edges
     const busSourceIds = new Set<string>()
+    let wireReg: WireRegistry | undefined
     if (isBlueprint && this._graph) {
+      wireReg = new WireRegistry((theme as any).gridSize ?? 20)
+      wireReg.registerNodeObstacles(positioned.nodes)
+
       // Find sources with 2+ edges (these become bus lines)
       const edgeCounts = new Map<string, number>()
       for (const e of positioned.edges) {
@@ -691,15 +695,14 @@ export class MermaidRenderer {
 
       this._busSourceIds = busSourceIds
       this._busGraphics.clear()
-      this._drawBlueprintBusLines(positioned, theme, busSourceIds)
-      // Filter out edges that are drawn as bus lines
+      this._drawBlueprintBusLines(positioned, theme, busSourceIds, wireReg)
       edgesToDraw = positioned.edges.filter(e => !busSourceIds.has(e.source))
     }
 
     // Draw individual edges
     let edgeIdx = 0
     for (const edge of edgesToDraw) {
-      const eg = new EdgeGraphic(edge, theme, positioned.nodes, this._currentPhilosophy, edgeIdx, edgesToDraw.length); edgeIdx++
+      const eg = new EdgeGraphic(edge, theme, positioned.nodes, this._currentPhilosophy, edgeIdx, edgesToDraw.length, undefined, wireReg); edgeIdx++
       this._edgeGraphics.push(eg)
       this._viewport.addChild(eg)
     }
