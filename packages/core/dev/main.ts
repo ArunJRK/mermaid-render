@@ -176,6 +176,8 @@ const THEME_STYLES: Record<string, {
   map:       { bg: '#1a1a2e', text: '#7a7a9e', accent: '#e94560', border: '#0f3460', bodyBg: '#1a1a2e' },
   blueprint: { bg: '#0a192f', text: '#8892b0', accent: '#64ffda', border: '#233554', bodyBg: '#0a192f' },
   breath:    { bg: '#111111', text: '#888888', accent: '#ffffff', border: '#333333', bodyBg: '#111111' },
+  radial:    { bg: '#0f0f1a', text: '#9090b0', accent: '#b07aff', border: '#2a2a4a', bodyBg: '#0f0f1a' },
+  mosaic:    { bg: '#121212', text: '#909090', accent: '#ff9f43', border: '#2a2a2a', bodyBg: '#121212' },
 }
 
 let currentLayout = 'narrative'
