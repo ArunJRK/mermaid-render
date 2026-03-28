@@ -992,13 +992,55 @@ export class MermaidRenderer {
    * This prevents multiple parallel wires from the same source port.
    * Returns a Graphics object with the bus lines, or null if no buses needed.
    */
+  /** Check if a vertical line at x from y1 to y2 hits any node (excluding given IDs) */
+  private _verticalHitsNode(x: number, y1: number, y2: number, positioned: PositionedGraph, excludeIds: Set<string>): boolean {
+    const minY = Math.min(y1, y2)
+    const maxY = Math.max(y1, y2)
+    for (const [id, node] of positioned.nodes) {
+      if (excludeIds.has(id)) continue
+      const hw = node.width / 2 + 8
+      const hh = node.height / 2 + 8
+      if (x >= node.x - hw && x <= node.x + hw && maxY >= node.y - hh && minY <= node.y + hh) {
+        return true
+      }
+    }
+    return false
+  }
+
+  /** Find a clear vertical X lane near targetX that doesn't hit nodes */
+  private _findClearVerticalLane(targetX: number, y1: number, y2: number, positioned: PositionedGraph, excludeIds: Set<string>, gridSize: number): number {
+    if (!this._verticalHitsNode(targetX, y1, y2, positioned, excludeIds)) return targetX
+    // Try offsets left and right
+    for (let i = 1; i <= 15; i++) {
+      const leftX = Math.round((targetX - i * gridSize) / gridSize) * gridSize
+      if (!this._verticalHitsNode(leftX, y1, y2, positioned, excludeIds)) return leftX
+      const rightX = Math.round((targetX + i * gridSize) / gridSize) * gridSize
+      if (!this._verticalHitsNode(rightX, y1, y2, positioned, excludeIds)) return rightX
+    }
+    return targetX // give up
+  }
+
+  /** Check if a horizontal line at y from x1 to x2 hits any node */
+  private _horizontalHitsNode(y: number, x1: number, x2: number, positioned: PositionedGraph, excludeIds: Set<string>): boolean {
+    const minX = Math.min(x1, x2)
+    const maxX = Math.max(x1, x2)
+    for (const [id, node] of positioned.nodes) {
+      if (excludeIds.has(id)) continue
+      const hw = node.width / 2 + 8
+      const hh = node.height / 2 + 8
+      if (y >= node.y - hh && y <= node.y + hh && maxX >= node.x - hw && minX <= node.x + hw) {
+        return true
+      }
+    }
+    return false
+  }
+
   private _drawBlueprintBusLines(positioned: PositionedGraph, theme: Theme, busSourceIds: Set<string>): void {
     if (!this._graph || !this._viewport) return
 
     const gridSize = (theme as any).gridSize ?? 20
     const color = theme.edgeColor
 
-    // Group edges by source node
     const bySource = new Map<string, typeof positioned.edges>()
     for (const edge of positioned.edges) {
       const group = bySource.get(edge.source) ?? []
@@ -1012,8 +1054,9 @@ export class MermaidRenderer {
       const srcNode = positioned.nodes.get(sourceId)
       if (!srcNode) continue
 
-      const srcPortX = srcNode.x
       const srcPortY = srcNode.y + srcNode.height / 2
+      const targetIds = new Set(edges.map(e => e.target))
+      const excludeIds = new Set([sourceId, ...targetIds])
 
       const targets = edges.map(e => {
         const tgt = positioned.nodes.get(e.target)
@@ -1022,27 +1065,42 @@ export class MermaidRenderer {
 
       if (targets.length < 2) continue
 
+      // Find a clear trunk X lane
+      const trunkX = this._findClearVerticalLane(srcNode.x, srcPortY, Math.min(...targets.map(t => t.y)), positioned, excludeIds, gridSize)
+
+      // Find a clear horizontal bus Y
       const minTargetY = Math.min(...targets.map(t => t.y))
-      const trunkY = Math.round(((srcPortY + minTargetY) / 2) / gridSize) * gridSize
+      let busY = Math.round(((srcPortY + minTargetY) / 2) / gridSize) * gridSize
+      const minBusX = Math.min(trunkX, ...targets.map(t => t.x))
+      const maxBusX = Math.max(trunkX, ...targets.map(t => t.x))
 
-      // One Graphics per source so we can highlight individually
+      // Shift busY if it hits nodes
+      for (let attempt = 0; attempt < 15; attempt++) {
+        if (!this._horizontalHitsNode(busY, minBusX, maxBusX, positioned, excludeIds)) break
+        busY += (attempt % 2 === 0 ? 1 : -1) * (attempt + 1) * gridSize
+        busY = Math.round(busY / gridSize) * gridSize
+      }
+
       const busGfx = new Graphics()
-      busGfx.moveTo(srcPortX, srcPortY)
-      busGfx.lineTo(srcPortX, trunkY)
 
-      const minX = Math.min(srcPortX, ...targets.map(t => t.x))
-      const maxX = Math.max(srcPortX, ...targets.map(t => t.x))
-      busGfx.moveTo(minX, trunkY)
-      busGfx.lineTo(maxX, trunkY)
+      // Trunk: source → trunkX → busY
+      busGfx.moveTo(srcNode.x, srcPortY)
+      if (trunkX !== srcNode.x) busGfx.lineTo(trunkX, srcPortY)
+      busGfx.lineTo(trunkX, busY)
 
+      // Horizontal bus
+      busGfx.moveTo(minBusX, busY)
+      busGfx.lineTo(maxBusX, busY)
+
+      // Fan-out: each target gets a clear vertical lane
       for (const tgt of targets) {
-        busGfx.moveTo(tgt.x, trunkY)
-        busGfx.lineTo(tgt.x, tgt.y)
+        const dropX = this._findClearVerticalLane(tgt.x, busY, tgt.y, positioned, excludeIds, gridSize)
+        busGfx.moveTo(dropX, busY)
+        busGfx.lineTo(dropX, tgt.y)
+        if (dropX !== tgt.x) busGfx.lineTo(tgt.x, tgt.y)
       }
 
       busGfx.stroke({ width: 1.5, color })
-
-      // Store for hover highlighting. Key = sourceId, also store target IDs
       ;(busGfx as any)._targetIds = targets.map(t => t.id)
       this._busGraphics.set(sourceId, busGfx)
       this._viewport.addChild(busGfx)

@@ -19,7 +19,7 @@ export class EdgeGraphic extends Graphics {
    * @param edgeIndex — unique index for this edge, used by Blueprint to offset parallel routes
    * @param totalEdges — total edges in the graph, used for channel spacing
    */
-  constructor(edge: PositionedEdge, theme: Theme, allNodes?: Map<string, PositionedNode>, philosophy?: string, edgeIndex = 0, totalEdges = 1) {
+  constructor(edge: PositionedEdge, theme: Theme, allNodes?: Map<string, PositionedNode>, philosophy?: string, edgeIndex = 0, totalEdges = 1, allSubgraphs?: Map<string, { x: number; y: number; width: number; height: number }>) {
     super()
     if (allNodes && philosophy !== 'blueprint') {
       edge = this._applyCollisionAvoidance(edge, allNodes)
