@@ -1,5 +1,6 @@
 import dagre from '@dagrejs/dagre'
 import { computeNodeWidth } from './text-measure'
+import { DagreLayout } from './dagre-layout'
 import type {
   RenderGraph,
   RenderEdge,
@@ -63,6 +64,13 @@ export class NarrativeLayout implements LayoutEngine {
         width: 0,
         height: 0,
       }
+    }
+
+    // If the graph has many subgraphs (overview diagram), Narrative flow lanes
+    // don't make sense. Fall back to the standard two-pass dagre layout.
+    if (graph.subgraphs.size > 3) {
+      const fallback = new DagreLayout({ philosophy: 'narrative', spacingMultiplier: this.multiplier })
+      return fallback.compute(graph)
     }
 
     // Step 1: Detect spine

@@ -34,10 +34,22 @@ export class NodeSprite extends Container {
     this._drawShape(node.shape, node.width, node.height, theme.nodeStroke)
     this.addChild(this._gfx)
 
-    // Label
+    // Label — truncate to fit node width
     ensureFontsInstalled()
+    const maxLabelWidth = node.width - 16 // padding
+    let labelText = node.label
+    // Truncate if text would overflow
+    if (labelText.length > 2) {
+      // Rough check: if estimated width exceeds node width, truncate
+      const charWidth = fontName === 'MermaidBlueprint' ? 8.4 : 7.5
+      const estWidth = labelText.length * charWidth
+      if (estWidth > maxLabelWidth) {
+        const maxChars = Math.max(3, Math.floor(maxLabelWidth / charWidth) - 1)
+        labelText = labelText.slice(0, maxChars) + '..'
+      }
+    }
     this._label = new BitmapText({
-      text: node.label,
+      text: labelText,
       style: { fontFamily: fontName, fontSize: 14 },
     })
     this._label.anchor.set(0.5)
