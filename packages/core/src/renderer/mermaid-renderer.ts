@@ -388,12 +388,39 @@ export class MermaidRenderer {
     this._busGraphics.clear()
     this._busSourceIds.clear()
 
-    // Edges
+    // Blueprint: bus lines for multi-target edges from same source
+    let edgesToRender = positioned.edges
+    if (isBlueprint && this._graph) {
+      const edgeCounts = new Map<string, number>()
+      for (const e of positioned.edges) {
+        edgeCounts.set(e.source, (edgeCounts.get(e.source) ?? 0) + 1)
+      }
+      const busSourceIds = new Set<string>()
+      for (const [src, count] of edgeCounts) {
+        if (count >= 2) busSourceIds.add(src)
+      }
+      this._busSourceIds = busSourceIds
+      this._drawBlueprintBusLines(positioned, theme, busSourceIds)
+      edgesToRender = positioned.edges.filter(e => !busSourceIds.has(e.source))
+    }
+
+    // Draw edges — pass all nodes for Blueprint collision avoidance
     let edgeIdx = 0
-    for (const edge of positioned.edges) {
-      const eg = new EdgeGraphic(edge, theme, isBlueprint ? positioned.nodes : undefined, this._currentPhilosophy, edgeIdx, positioned.edges.length); edgeIdx++
+    for (const edge of edgesToRender) {
+      const eg = new EdgeGraphic(edge, theme, positioned.nodes, this._currentPhilosophy, edgeIdx, edgesToRender.length); edgeIdx++
       this._edgeGraphics.push(eg)
       this._viewport.addChild(eg)
+    }
+
+    // Blueprint: wire crossing hops
+    if (isBlueprint) {
+      const edgeSegments = this._edgeGraphics
+        .filter(eg => eg.orthogonalSegments != null)
+        .map(eg => ({ edgeId: eg.data.id, segments: eg.orthogonalSegments! }))
+      if (edgeSegments.length > 0) {
+        const hopGraphic = drawWireHops(edgeSegments, theme)
+        this._viewport.addChild(hopGraphic)
+      }
     }
 
     // Determine font name based on philosophy
@@ -667,7 +694,7 @@ export class MermaidRenderer {
     // Draw individual edges
     let edgeIdx = 0
     for (const edge of edgesToDraw) {
-      const eg = new EdgeGraphic(edge, theme, isBlueprint ? positioned.nodes : undefined, this._currentPhilosophy, edgeIdx, edgesToDraw.length); edgeIdx++
+      const eg = new EdgeGraphic(edge, theme, positioned.nodes, this._currentPhilosophy, edgeIdx, edgesToDraw.length); edgeIdx++
       this._edgeGraphics.push(eg)
       this._viewport.addChild(eg)
     }
