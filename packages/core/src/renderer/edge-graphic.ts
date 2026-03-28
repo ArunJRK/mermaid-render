@@ -202,23 +202,67 @@ export class EdgeGraphic extends Graphics {
       }
     }
 
-    // Route: srcPort → down to midY → across to tgtPort.x → down to tgtPort
+    // Check vertical segments for node collisions and offset if needed
+    let srcExitX = srcPort.x
+    let tgtEntryX = tgtPort.x
+
+    if (allNodes) {
+      // Check source vertical segment (srcPort down to midY)
+      for (const [id, node] of allNodes) {
+        if (id === edge.source || id === edge.target) continue
+        const hw = node.width / 2 + 6
+        const hh = node.height / 2 + 6
+        // Vertical line at srcExitX from srcPort.y to midY
+        const minSegY = Math.min(srcPort.y, midY)
+        const maxSegY = Math.max(srcPort.y, midY)
+        if (srcExitX >= node.x - hw && srcExitX <= node.x + hw &&
+            maxSegY >= node.y - hh && minSegY <= node.y + hh) {
+          // Offset source exit X to the side of the blocking node
+          srcExitX = srcExitX < node.x ? node.x - hw - gridSize : node.x + hw + gridSize
+          srcExitX = Math.round(srcExitX / gridSize) * gridSize
+        }
+      }
+      // Check target vertical segment (midY down to tgtPort)
+      for (const [id, node] of allNodes) {
+        if (id === edge.source || id === edge.target) continue
+        const hw = node.width / 2 + 6
+        const hh = node.height / 2 + 6
+        const minSegY = Math.min(midY, tgtPort.y)
+        const maxSegY = Math.max(midY, tgtPort.y)
+        if (tgtEntryX >= node.x - hw && tgtEntryX <= node.x + hw &&
+            maxSegY >= node.y - hh && minSegY <= node.y + hh) {
+          tgtEntryX = tgtEntryX < node.x ? node.x - hw - gridSize : node.x + hw + gridSize
+          tgtEntryX = Math.round(tgtEntryX / gridSize) * gridSize
+        }
+      }
+    }
+
+    // Route with potentially offset vertical segments
     this.moveTo(srcPort.x, srcPort.y)
-    this.lineTo(srcPort.x, midY)
-    this.lineTo(tgtPort.x, midY)
-    this.lineTo(tgtPort.x, tgtPort.y)
+    if (srcExitX !== srcPort.x) {
+      // Jog horizontally to clear, then go vertical
+      this.lineTo(srcExitX, srcPort.y)
+    }
+    this.lineTo(srcExitX, midY)
+    this.lineTo(tgtEntryX, midY)
+    if (tgtEntryX !== tgtPort.x) {
+      this.lineTo(tgtEntryX, tgtPort.y)
+      this.lineTo(tgtPort.x, tgtPort.y)
+    } else {
+      this.lineTo(tgtPort.x, tgtPort.y)
+    }
 
     this.stroke({ width: 1.5, color })
 
-    // Record orthogonal segments for wire-hop detection
+    // Record orthogonal segments for wire-hop detection (use actual routed positions)
     this.orthogonalSegments = [
-      { x1: srcPort.x, y1: srcPort.y, x2: srcPort.x, y2: midY, isHorizontal: false, edgeId: edge.id },
-      { x1: srcPort.x, y1: midY, x2: tgtPort.x, y2: midY, isHorizontal: true, edgeId: edge.id },
-      { x1: tgtPort.x, y1: midY, x2: tgtPort.x, y2: tgtPort.y, isHorizontal: false, edgeId: edge.id },
+      { x1: srcExitX, y1: srcPort.y, x2: srcExitX, y2: midY, isHorizontal: false, edgeId: edge.id },
+      { x1: srcExitX, y1: midY, x2: tgtEntryX, y2: midY, isHorizontal: true, edgeId: edge.id },
+      { x1: tgtEntryX, y1: midY, x2: tgtEntryX, y2: tgtPort.y, isHorizontal: false, edgeId: edge.id },
     ]
 
-    // Arrow
-    this._drawArrow([{ x: tgtPort.x, y: midY }, tgtPort], color)
+    // Arrow pointing into target
+    this._drawArrow([{ x: tgtEntryX, y: midY }, tgtPort], color)
 
     // Label at the horizontal segment midpoint
     if (edge.label) {
