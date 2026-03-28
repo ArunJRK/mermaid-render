@@ -810,27 +810,22 @@ export class MermaidRenderer {
    * Hiding only kicks in when user zooms OUT beyond the default.
    */
   private _updateDetailLevel(zoom: number): void {
-    // Get the fit zoom as baseline — everything at or above this should show full detail
+    // Nodes get absolute zoom for Coggle-style font counter-scaling
+    for (const sprite of this._nodeSprites.values()) {
+      sprite.updateDetailLevel(zoom)
+    }
+
+    // Subgraphs use relative zoom for label visibility
     const fitZoom = this._fitZoom ?? 1
     const relativeZoom = fitZoom > 0 ? zoom / fitZoom : zoom
-
-    for (const sprite of this._nodeSprites.values()) {
-      sprite.updateDetailLevel(relativeZoom)
-    }
     for (const sgc of this._subgraphContainers.values()) {
       sgc.updateDetailLevel(relativeZoom)
     }
-    // Only hide edges when zoomed way out (less than 30% of default)
+
+    // Edges always visible
     for (const eg of this._edgeGraphics) {
-      if (relativeZoom < 0.3) {
-        eg.visible = false
-      } else if (relativeZoom < 0.6) {
-        eg.visible = true
-        eg.alpha = (relativeZoom - 0.3) / 0.3
-      } else {
-        eg.visible = true
-        eg.alpha = 1
-      }
+      eg.visible = true
+      eg.alpha = 1
     }
   }
 

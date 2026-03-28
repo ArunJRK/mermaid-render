@@ -123,23 +123,27 @@ export class NodeSprite extends Container {
    * @param zoom Current viewport zoom level.
    */
   /**
-   * Update visibility based on semantic zoom.
-   * zoom is RELATIVE to fitToView (1.0 = default view, everything should show).
-   * Hiding only kicks in below 0.5 (user zoomed out beyond default).
+   * Coggle-style: text always stays readable regardless of zoom.
+   * Counter-scales font size so it maintains a constant screen size,
+   * clamped between min (8px) and max (20px screen pixels).
+   * @param absoluteZoom The actual viewport zoom level (not relative)
    */
-  updateDetailLevel(zoom: number): void {
-    if (zoom < 0.3) {
-      this._label.visible = false
-      this._gfx.alpha = 0.4
-    } else if (zoom < 0.6) {
-      this._label.visible = false
-      this._gfx.alpha = 0.6 + (zoom - 0.3) / 0.3 * 0.4
-    } else {
-      // At default zoom and above: full detail
-      this._label.visible = true
-      this._label.alpha = 1
-      this._gfx.alpha = 1
-    }
+  updateDetailLevel(absoluteZoom: number): void {
+    // Always visible
+    this._label.visible = true
+    this._gfx.alpha = 1
+
+    // Counter-scale: as viewport zooms in, make label smaller in world space
+    // so it stays ~14px on screen. Clamp to min/max.
+    const baseFontSize = 14
+    const minScreenPx = 8
+    const maxScreenPx = 22
+    const desiredWorldSize = baseFontSize / Math.max(absoluteZoom, 0.05)
+    const screenSize = desiredWorldSize * absoluteZoom
+    const clampedScreenSize = Math.max(minScreenPx, Math.min(maxScreenPx, screenSize))
+    const finalWorldSize = clampedScreenSize / Math.max(absoluteZoom, 0.05)
+
+    this._label.style.fontSize = finalWorldSize
   }
 
   private _drawHoverGlow(shape: NodeShape, w: number, h: number): void {
