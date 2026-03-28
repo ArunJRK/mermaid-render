@@ -636,10 +636,31 @@ export class MermaidRenderer {
       this._viewport.addChild(sgc)
     }
 
-    // Draw edges — pass all nodes for collision avoidance in Blueprint mode
+    // Blueprint: merge edges from same source into bus/trunk lines
+    let edgesToDraw = positioned.edges
+    const busSourceIds = new Set<string>()
+    if (isBlueprint && this._graph) {
+      // Find sources with 2+ edges (these become bus lines)
+      const edgeCounts = new Map<string, number>()
+      for (const e of positioned.edges) {
+        edgeCounts.set(e.source, (edgeCounts.get(e.source) ?? 0) + 1)
+      }
+      for (const [src, count] of edgeCounts) {
+        if (count >= 2) busSourceIds.add(src)
+      }
+
+      const busGraphic = this._drawBlueprintBusLines(positioned, theme)
+      if (busGraphic) {
+        this._viewport.addChild(busGraphic)
+        // Filter out edges that are drawn as bus lines
+        edgesToDraw = positioned.edges.filter(e => !busSourceIds.has(e.source))
+      }
+    }
+
+    // Draw individual edges
     let edgeIdx = 0
-    for (const edge of positioned.edges) {
-      const eg = new EdgeGraphic(edge, theme, isBlueprint ? positioned.nodes : undefined, this._currentPhilosophy, edgeIdx, positioned.edges.length); edgeIdx++
+    for (const edge of edgesToDraw) {
+      const eg = new EdgeGraphic(edge, theme, isBlueprint ? positioned.nodes : undefined, this._currentPhilosophy, edgeIdx, edgesToDraw.length); edgeIdx++
       this._edgeGraphics.push(eg)
       this._viewport.addChild(eg)
     }
@@ -923,5 +944,75 @@ export class MermaidRenderer {
       if (frame < 9) requestAnimationFrame(fadeIn)
     }
     requestAnimationFrame(fadeIn)
+  }
+
+  /**
+   * Blueprint bus lines: when one source node has multiple edges to different targets,
+   * draw a single trunk wire from the source, then fan out horizontally to each target.
+   * This prevents multiple parallel wires from the same source port.
+   * Returns a Graphics object with the bus lines, or null if no buses needed.
+   */
+  private _drawBlueprintBusLines(positioned: PositionedGraph, theme: Theme): Graphics | null {
+    if (!this._graph) return null
+
+    const gridSize = (theme as any).gridSize ?? 20
+    const color = theme.edgeColor
+
+    // Group edges by source node
+    const bySource = new Map<string, typeof positioned.edges>()
+    for (const edge of positioned.edges) {
+      const group = bySource.get(edge.source) ?? []
+      group.push(edge)
+      bySource.set(edge.source, group)
+    }
+
+    const busGfx = new Graphics()
+    let drewAny = false
+
+    for (const [sourceId, edges] of bySource) {
+      if (edges.length < 2) continue // only bus when 2+ edges from same source
+
+      const srcNode = positioned.nodes.get(sourceId)
+      if (!srcNode) continue
+
+      // Source port: bottom of source node
+      const srcPortX = srcNode.x
+      const srcPortY = srcNode.y + srcNode.height / 2
+
+      // Find all target ports
+      const targets = edges.map(e => {
+        const tgt = positioned.nodes.get(e.target)
+        return tgt ? { id: e.target, x: tgt.x, y: tgt.y - tgt.height / 2 } : null
+      }).filter(Boolean) as Array<{ id: string; x: number; y: number }>
+
+      if (targets.length < 2) continue
+
+      // Trunk Y: grid-snapped midpoint between source bottom and nearest target top
+      const minTargetY = Math.min(...targets.map(t => t.y))
+      const trunkY = Math.round(((srcPortY + minTargetY) / 2) / gridSize) * gridSize
+
+      // Draw trunk: source port → down to trunkY
+      busGfx.moveTo(srcPortX, srcPortY)
+      busGfx.lineTo(srcPortX, trunkY)
+
+      // Draw horizontal bus across all targets
+      const minX = Math.min(srcPortX, ...targets.map(t => t.x))
+      const maxX = Math.max(srcPortX, ...targets.map(t => t.x))
+      busGfx.moveTo(minX, trunkY)
+      busGfx.lineTo(maxX, trunkY)
+
+      // Draw fan-out: vertical drop from trunkY to each target
+      for (const tgt of targets) {
+        busGfx.moveTo(tgt.x, trunkY)
+        busGfx.lineTo(tgt.x, tgt.y)
+      }
+
+      drewAny = true
+    }
+
+    if (!drewAny) return null
+
+    busGfx.stroke({ width: 1.5, color })
+    return busGfx
   }
 }
