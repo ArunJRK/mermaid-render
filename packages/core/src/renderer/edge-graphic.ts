@@ -3,6 +3,7 @@ import type { PositionedEdge, PositionedNode, EdgeStyle } from '../types'
 import { ensureFontsInstalled } from './fonts'
 import { lineIntersectsRect, computeWaypoint } from '../layout/blueprint-layout'
 import type { Theme } from './theme'
+import type { WireSegment } from './wire-hops'
 
 const DIMMED_ALPHA = 0.12
 const ARROW_SIZE = 8
@@ -10,6 +11,9 @@ const ARROW_SIZE = 8
 export class EdgeGraphic extends Graphics {
   readonly data: PositionedEdge
   private _labelText: BitmapText | null = null
+
+  /** Orthogonal wire segments (set by Blueprint mode, read by wire-hop detector) */
+  orthogonalSegments?: WireSegment[]
 
   /**
    * @param edgeIndex — unique index for this edge, used by Blueprint to offset parallel routes
@@ -144,6 +148,11 @@ export class EdgeGraphic extends Graphics {
    * Blueprint: orthogonal edges with right-angle routing.
    * Goes horizontal to midpoint x, then vertical to target y, then horizontal to target.
    * Snaps to 20px grid.
+   *
+   * Port-based attachment: wires exit from the BOTTOM of the source node and
+   * enter at the TOP of the target node (in TD layout).
+   *
+   * Junction dots are drawn at bend points where the wire changes direction.
    */
   private _drawOrthogonal(edge: PositionedEdge, theme: Theme, edgeIndex: number, totalEdges: number, allNodes?: Map<string, PositionedNode>): void {
     const points = edge.points
@@ -154,16 +163,22 @@ export class EdgeGraphic extends Graphics {
     const color = theme.edgeColor
     const gridSize = (theme as any).gridSize ?? 20
 
+    // Port-based attachment: exit from bottom of source, enter top of target
+    const srcNode = allNodes?.get(edge.source)
+    const tgtNode = allNodes?.get(edge.target)
+    const srcPort = { x: src.x, y: srcNode ? srcNode.y + srcNode.height / 2 : src.y }
+    const tgtPort = { x: tgt.x, y: tgtNode ? tgtNode.y - tgtNode.height / 2 : tgt.y }
+
     // Find a horizontal channel Y that doesn't pass through any node
-    const baseMidY = (src.y + tgt.y) / 2
+    const baseMidY = (srcPort.y + tgtPort.y) / 2
     const channelOffset = (edgeIndex - totalEdges / 2) * gridSize * 0.6
     let midY = Math.round((baseMidY + channelOffset) / gridSize) * gridSize
 
     // Check if this horizontal channel (from min(src.x, tgt.x) to max(src.x, tgt.x))
     // passes through any node. If so, shift up or down until clear.
     if (allNodes) {
-      const minX = Math.min(src.x, tgt.x)
-      const maxX = Math.max(src.x, tgt.x)
+      const minX = Math.min(srcPort.x, tgtPort.x)
+      const maxX = Math.max(srcPort.x, tgtPort.x)
       let attempts = 0
       while (attempts < 20) {
         let blocked = false
@@ -187,20 +202,33 @@ export class EdgeGraphic extends Graphics {
       }
     }
 
-    // Route: src → down to midY → across to tgt.x → down to tgt
-    this.moveTo(src.x, src.y)
-    this.lineTo(src.x, midY)
-    this.lineTo(tgt.x, midY)
-    this.lineTo(tgt.x, tgt.y)
+    // Route: srcPort → down to midY → across to tgtPort.x → down to tgtPort
+    this.moveTo(srcPort.x, srcPort.y)
+    this.lineTo(srcPort.x, midY)
+    this.lineTo(tgtPort.x, midY)
+    this.lineTo(tgtPort.x, tgtPort.y)
 
     this.stroke({ width: 1.5, color })
 
+    // Junction dots at bend points
+    const JUNCTION_RADIUS = 3
+    this.circle(srcPort.x, midY, JUNCTION_RADIUS)
+    this.circle(tgtPort.x, midY, JUNCTION_RADIUS)
+    this.fill({ color })
+
+    // Record orthogonal segments for wire-hop detection
+    this.orthogonalSegments = [
+      { x1: srcPort.x, y1: srcPort.y, x2: srcPort.x, y2: midY, isHorizontal: false, edgeId: edge.id },
+      { x1: srcPort.x, y1: midY, x2: tgtPort.x, y2: midY, isHorizontal: true, edgeId: edge.id },
+      { x1: tgtPort.x, y1: midY, x2: tgtPort.x, y2: tgtPort.y, isHorizontal: false, edgeId: edge.id },
+    ]
+
     // Arrow
-    this._drawArrow([{ x: tgt.x, y: midY }, tgt], color)
+    this._drawArrow([{ x: tgtPort.x, y: midY }, tgtPort], color)
 
     // Label at the horizontal segment midpoint
     if (edge.label) {
-      const labelX = (src.x + tgt.x) / 2
+      const labelX = (srcPort.x + tgtPort.x) / 2
       ensureFontsInstalled()
       this._labelText = new BitmapText({
         text: edge.label,

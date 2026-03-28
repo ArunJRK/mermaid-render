@@ -141,11 +141,65 @@ const BREATH: Theme = {
   breadcrumbAccent: '#ffffff',
 }
 
+// ── Radial "Orbit" ──────────────────────────────────────────────────────────
+const RADIAL: Theme = {
+  name: 'Orbit',
+  background: 0x0f0f1a,
+  nodeFill: 0x1a1a2e,
+  nodeStroke: 0x4a3a6a,
+  nodeStrokeSelected: 0xb07aff,
+  nodeText: 0xe0d8f0,
+  edgeColor: 0x6a5a8a,
+  edgeLabelColor: 0x9090b0,
+  subgraphFill: 0x1a1a2e,
+  subgraphFillAlpha: 0.3,
+  subgraphStroke: 0x4a3a6a,
+  subgraphStrokeAlpha: 0.5,
+  subgraphLabel: 0x9090b0,
+  hoverGlow: 0xb07aff,
+  hoverGlowAlpha: 0.25,
+  accent: 0xb07aff,
+  strokeWidth: 2,
+  cornerRadius: 12,
+  dimmedAlpha: 0.2,
+  breadcrumbBg: '#0f0f1a',
+  breadcrumbText: '#9090b0',
+  breadcrumbAccent: '#b07aff',
+}
+
+// ── Mosaic "Board" ──────────────────────────────────────────────────────────
+const MOSAIC: Theme = {
+  name: 'Board',
+  background: 0x121212,
+  nodeFill: 0x1e1e1e,
+  nodeStroke: 0x3a3a3a,
+  nodeStrokeSelected: 0xff9f43,
+  nodeText: 0xe0e0e0,
+  edgeColor: 0x3a3a3a,
+  edgeLabelColor: 0x909090,
+  subgraphFill: 0x1e1e1e,
+  subgraphFillAlpha: 0.25,
+  subgraphStroke: 0x3a3a3a,
+  subgraphStrokeAlpha: 0.4,
+  subgraphLabel: 0x909090,
+  hoverGlow: 0xff9f43,
+  hoverGlowAlpha: 0.2,
+  accent: 0xff9f43,
+  strokeWidth: 1.5,
+  cornerRadius: 8,
+  dimmedAlpha: 0.2,
+  breadcrumbBg: '#121212',
+  breadcrumbText: '#909090',
+  breadcrumbAccent: '#ff9f43',
+}
+
 const THEMES: Record<LayoutPhilosophy, Theme> = {
   narrative: NARRATIVE,
   map: MAP,
   blueprint: BLUEPRINT,
   breath: BREATH,
+  radial: RADIAL,
+  mosaic: MOSAIC,
 }
 
 export function getTheme(philosophy: LayoutPhilosophy): Theme {

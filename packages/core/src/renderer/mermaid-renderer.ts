@@ -1,4 +1,4 @@
-import { Application, Graphics } from 'pixi.js'
+import { Application, Graphics, BitmapText } from 'pixi.js'
 import type {
   LoadResult,
   LoadOptions,
@@ -21,6 +21,8 @@ import { NarrativeLayout } from '../layout/narrative-layout'
 import { getTheme, type Theme } from './theme'
 import { LinkPreview } from './link-preview'
 import { LayoutAnimator } from './layout-animator'
+import { drawWireHops } from './wire-hops'
+import { ensureFontsInstalled } from './fonts'
 
 /**
  * Public API for the mermaid-render engine.
@@ -578,6 +580,94 @@ export class MermaidRenderer {
       }
       gridGfx.stroke({ width: 1, color: gridColor, alpha: gridAlpha })
       this._viewport.addChild(gridGfx)
+
+      // ── Border frame with grid references ──
+      const borderGfx = new Graphics()
+      const borderPad = 60
+      const bx0 = -borderPad
+      const by0 = -borderPad
+      const bx1 = positioned.width + borderPad
+      const by1 = positioned.height + borderPad
+      const bw = bx1 - bx0
+      const bh = by1 - by0
+
+      // Thick border rectangle
+      borderGfx.rect(bx0, by0, bw, bh)
+      borderGfx.stroke({ width: 3, color: theme.edgeColor })
+
+      // Grid reference labels along edges
+      ensureFontsInstalled()
+      const refSpacing = 100
+      // Letters across the top: A, B, C...
+      const numCols = Math.max(1, Math.floor(bw / refSpacing))
+      for (let c = 0; c < numCols; c++) {
+        const lx = bx0 + refSpacing / 2 + c * refSpacing
+        const letter = String.fromCharCode(65 + (c % 26))
+        const topLabel = new BitmapText({
+          text: letter,
+          style: { fontFamily: 'MermaidBlueprint', fontSize: 9 },
+        })
+        topLabel.anchor.set(0.5)
+        topLabel.x = lx
+        topLabel.y = by0 + 10
+        borderGfx.addChild(topLabel)
+      }
+      // Numbers down the side: 1, 2, 3...
+      const numRows = Math.max(1, Math.floor(bh / refSpacing))
+      for (let r = 0; r < numRows; r++) {
+        const ly = by0 + refSpacing / 2 + r * refSpacing
+        const sideLabel = new BitmapText({
+          text: String(r + 1),
+          style: { fontFamily: 'MermaidBlueprint', fontSize: 9 },
+        })
+        sideLabel.anchor.set(0.5)
+        sideLabel.x = bx0 + 12
+        sideLabel.y = ly
+        borderGfx.addChild(sideLabel)
+      }
+
+      this._viewport.addChild(borderGfx)
+
+      // ── Title block (bottom-right corner) ──
+      const titleGfx = new Graphics()
+      const tbWidth = 180
+      const tbHeight = 50
+      const tbX = bx1 - tbWidth
+      const tbY = by1 - tbHeight
+
+      titleGfx.rect(tbX, tbY, tbWidth, tbHeight)
+      titleGfx.fill({ color: theme.background, alpha: 0.85 })
+      titleGfx.stroke({ width: 2, color: theme.edgeColor })
+
+      // Divider line inside the title block
+      titleGfx.moveTo(tbX, tbY + tbHeight * 0.55)
+      titleGfx.lineTo(tbX + tbWidth, tbY + tbHeight * 0.55)
+      titleGfx.stroke({ width: 1, color: theme.edgeColor, alpha: 0.5 })
+
+      // Title text — use the last breadcrumb segment or "Blueprint"
+      const titleText = this._focusStack.length > 0
+        ? (this._graph?.subgraphs.get(this._focusStack[this._focusStack.length - 1])?.label ?? 'Blueprint')
+        : 'Blueprint'
+      const titleLabel = new BitmapText({
+        text: titleText,
+        style: { fontFamily: 'MermaidBlueprint', fontSize: 10 },
+      })
+      titleLabel.anchor.set(0.5, 0.5)
+      titleLabel.x = tbX + tbWidth / 2
+      titleLabel.y = tbY + tbHeight * 0.28
+      titleGfx.addChild(titleLabel)
+
+      // REV field
+      const revLabel = new BitmapText({
+        text: 'REV v0.1',
+        style: { fontFamily: 'MermaidBlueprint', fontSize: 9 },
+      })
+      revLabel.anchor.set(0.5, 0.5)
+      revLabel.x = tbX + tbWidth / 2
+      revLabel.y = tbY + tbHeight * 0.78
+      titleGfx.addChild(revLabel)
+
+      this._viewport.addChild(titleGfx)
     }
 
     // Compute nesting depth for each subgraph (larger subgraphs containing smaller ones = deeper)
@@ -640,6 +730,17 @@ export class MermaidRenderer {
       const eg = new EdgeGraphic(edge, theme, isBlueprint ? positioned.nodes : undefined, this._currentPhilosophy, edgeIdx, positioned.edges.length); edgeIdx++
       this._edgeGraphics.push(eg)
       this._viewport.addChild(eg)
+    }
+
+    // Blueprint: wire crossing hops — drawn after all edges so we can detect crossings
+    if (isBlueprint) {
+      const edgeSegments = this._edgeGraphics
+        .filter(eg => eg.orthogonalSegments != null)
+        .map(eg => ({ edgeId: eg.data.id, segments: eg.orthogonalSegments! }))
+      if (edgeSegments.length > 0) {
+        const hopGraphic = drawWireHops(edgeSegments, theme)
+        this._viewport.addChild(hopGraphic)
+      }
     }
 
     // Build set of node IDs that have @link directives

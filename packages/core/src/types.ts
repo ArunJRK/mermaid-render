@@ -14,7 +14,7 @@ export type NodeShape =
 
 export type EdgeStyle = 'solid' | 'dotted' | 'thick'
 
-export type LayoutPhilosophy = 'narrative' | 'map' | 'blueprint' | 'breath'
+export type LayoutPhilosophy = 'narrative' | 'map' | 'blueprint' | 'breath' | 'radial' | 'mosaic'
 
 export type DiagramType =
   | 'flowchart'
