@@ -380,7 +380,7 @@ export class MermaidRenderer {
 
     // Edges
     for (const edge of positioned.edges) {
-      const eg = new EdgeGraphic(edge, theme, isBlueprint ? positioned.nodes : undefined)
+      const eg = new EdgeGraphic(edge, theme, isBlueprint ? positioned.nodes : undefined, this._currentPhilosophy)
       this._edgeGraphics.push(eg)
       this._viewport.addChild(eg)
     }
@@ -633,7 +633,7 @@ export class MermaidRenderer {
 
     // Draw edges — pass all nodes for collision avoidance in Blueprint mode
     for (const edge of positioned.edges) {
-      const eg = new EdgeGraphic(edge, theme, isBlueprint ? positioned.nodes : undefined)
+      const eg = new EdgeGraphic(edge, theme, isBlueprint ? positioned.nodes : undefined, this._currentPhilosophy)
       this._edgeGraphics.push(eg)
       this._viewport.addChild(eg)
     }

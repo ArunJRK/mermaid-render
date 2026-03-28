@@ -11,14 +11,24 @@ export class EdgeGraphic extends Graphics {
   readonly data: PositionedEdge
   private _labelText: BitmapText | null = null
 
-  constructor(edge: PositionedEdge, theme: Theme, allNodes?: Map<string, PositionedNode>) {
+  constructor(edge: PositionedEdge, theme: Theme, allNodes?: Map<string, PositionedNode>, philosophy?: string) {
     super()
     // If allNodes provided, apply collision avoidance to the edge points
     if (allNodes) {
       edge = this._applyCollisionAvoidance(edge, allNodes)
     }
     this.data = edge
-    this._draw(edge, theme)
+
+    switch (philosophy) {
+      case 'blueprint':
+        this._drawOrthogonal(edge, theme)
+        break
+      case 'breath':
+        this._drawWhisper(edge, theme)
+        break
+      default:
+        this._draw(edge, theme)
+    }
   }
 
   /**
@@ -125,5 +135,88 @@ export class EdgeGraphic extends Graphics {
 
   private _midpoint(points: Array<{ x: number; y: number }>): { x: number; y: number } {
     return points[Math.floor(points.length / 2)]
+  }
+
+  /**
+   * Blueprint: orthogonal edges with right-angle routing.
+   * Goes horizontal to midpoint x, then vertical to target y, then horizontal to target.
+   * Snaps to 20px grid.
+   */
+  private _drawOrthogonal(edge: PositionedEdge, theme: Theme): void {
+    const points = edge.points
+    if (points.length < 2) return
+
+    const src = points[0]
+    const tgt = points[points.length - 1]
+    const color = theme.edgeColor
+    const gridSize = (theme as any).gridSize ?? 20
+
+    // Snap midpoint to grid
+    const midY = Math.round(((src.y + tgt.y) / 2) / gridSize) * gridSize
+
+    // Route: src → down to midY → across to tgt.x → down to tgt
+    this.moveTo(src.x, src.y)
+    this.lineTo(src.x, midY)          // vertical from source
+    this.lineTo(tgt.x, midY)          // horizontal to target column
+    this.lineTo(tgt.x, tgt.y)         // vertical to target
+
+    this.stroke({ width: 1.5, color })
+
+    // Arrow
+    this._drawArrow([{ x: tgt.x, y: midY }, tgt], color)
+
+    // Label at the horizontal segment midpoint
+    if (edge.label) {
+      const labelX = (src.x + tgt.x) / 2
+      ensureFontsInstalled()
+      this._labelText = new BitmapText({
+        text: edge.label,
+        style: { fontFamily: 'MermaidBlueprint', fontSize: 10 },
+      })
+      this._labelText.anchor.set(0.5)
+      this._labelText.x = labelX
+      this._labelText.y = midY - 12
+      this.addChild(this._labelText)
+    }
+  }
+
+  /**
+   * Breath: whisper lines — barely visible, thin, low opacity.
+   * No labels by default.
+   */
+  private _drawWhisper(edge: PositionedEdge, theme: Theme): void {
+    const points = edge.points
+    if (points.length < 2) return
+
+    const color = theme.edgeColor
+
+    this.moveTo(points[0].x, points[0].y)
+    if (points.length === 2) {
+      this.lineTo(points[1].x, points[1].y)
+    } else {
+      // Gentle quadratic through midpoints
+      for (let i = 1; i < points.length - 1; i++) {
+        const xc = (points[i].x + points[i + 1].x) / 2
+        const yc = (points[i].y + points[i + 1].y) / 2
+        this.quadraticCurveTo(points[i].x, points[i].y, xc, yc)
+      }
+      this.lineTo(points[points.length - 1].x, points[points.length - 1].y)
+    }
+
+    // Whisper: thin, low opacity
+    this.stroke({ width: 1, color, alpha: 0.25 })
+
+    // Small subtle arrow
+    const last = points[points.length - 1]
+    const prev = points[points.length - 2]
+    const angle = Math.atan2(last.y - prev.y, last.x - prev.x)
+    const s = 5
+    this.moveTo(last.x, last.y)
+    this.lineTo(last.x - s * Math.cos(angle - Math.PI / 6), last.y - s * Math.sin(angle - Math.PI / 6))
+    this.moveTo(last.x, last.y)
+    this.lineTo(last.x - s * Math.cos(angle + Math.PI / 6), last.y - s * Math.sin(angle + Math.PI / 6))
+    this.stroke({ width: 0.8, color, alpha: 0.25 })
+
+    // No label for whisper lines (shown on hover only — future feature)
   }
 }
