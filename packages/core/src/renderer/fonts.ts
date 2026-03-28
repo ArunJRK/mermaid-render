@@ -2,23 +2,25 @@ import { BitmapFont } from 'pixi.js'
 
 let installed = false
 
-// Printable ASCII range for pre-rendering
-const ASCII_CHARS = ' !"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~'
+// Printable ASCII range + common symbols
+const ASCII_CHARS = ' !"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~▶▼'
 
 /**
- * Install dynamic BitmapFonts for use in the renderer.
- * PixiJS 8 generates these from system fonts at runtime — no pre-built atlas needed.
- * Text stays crisp at any zoom level.
+ * Install dynamic BitmapFonts at 4x render resolution.
+ * fontSize is 4x the display size so text stays crisp up to 4x zoom.
+ * PixiJS scales it down to display size via the BitmapText fontSize prop.
  */
 export function ensureFontsInstalled(): void {
   if (installed) return
   installed = true
 
+  const resolution = Math.max(2, Math.ceil(window.devicePixelRatio ?? 1)) * 2
+
   BitmapFont.install({
     name: 'MermaidNode',
     style: {
       fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-      fontSize: 28,
+      fontSize: 14 * resolution,
       fill: 0xf1f5f9,
     },
     chars: ASCII_CHARS.split(''),
@@ -28,7 +30,7 @@ export function ensureFontsInstalled(): void {
     name: 'MermaidLabel',
     style: {
       fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-      fontSize: 24,
+      fontSize: 12 * resolution,
       fill: 0x94a3b8,
       fontWeight: 'bold',
     },
@@ -39,7 +41,7 @@ export function ensureFontsInstalled(): void {
     name: 'MermaidEdge',
     style: {
       fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-      fontSize: 22,
+      fontSize: 11 * resolution,
       fill: 0xcbd5e1,
     },
     chars: ASCII_CHARS.split(''),

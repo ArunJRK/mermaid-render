@@ -1,0 +1,35 @@
+%% @layout narrative
+%% @link PaymentSvc -> /examples/microservice/payment-service.mmd#paymentFlow
+%% @link InventorySvc -> /examples/microservice/inventory-service.mmd#inventoryCheck
+
+graph TD
+    orderFlow[Receive Order] --> validate[Validate Order]
+    validate --> checkStock{Stock Available?}
+    checkStock -->|Yes| reserve[Reserve Items]
+    checkStock -->|No| backorder[Create Backorder]
+    reserve --> calcPrice[Calculate Price]
+    backorder --> notify[Notify Customer]
+    calcPrice --> PaymentSvc[Process Payment]
+    PaymentSvc --> confirm{Payment OK?}
+    confirm -->|Yes| fulfill[Fulfill Order]
+    confirm -->|No| cancel[Cancel & Release Stock]
+    fulfill --> ship[Schedule Shipping]
+    ship --> complete[Order Complete]
+    cancel --> notifyFail[Notify Failure]
+
+    subgraph validation[Order Validation]
+        validate
+        checkStock
+    end
+
+    subgraph processing[Order Processing]
+        reserve
+        calcPrice
+        backorder
+    end
+
+    subgraph fulfillment[Fulfillment]
+        fulfill
+        ship
+        complete
+    end

@@ -184,7 +184,11 @@ async function main() {
   document.querySelectorAll('#controls button').forEach(btn => {
     btn.addEventListener('click', () => {
       const layout = btn.getAttribute('data-layout')
-      if (layout) loadWithLayout(layout)
+      if (layout) {
+        currentLayout = layout
+        renderer.setPhilosophy(layout)
+        applyThemeStyles(layout)
+      }
     })
   })
 

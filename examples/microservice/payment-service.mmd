@@ -1,0 +1,23 @@
+%% @layout blueprint
+
+graph TD
+    paymentFlow[Payment Request] --> authCard[Authorize Card]
+    authCard --> gateway{Gateway Response}
+    gateway -->|Approved| capture[Capture Funds]
+    gateway -->|Declined| retry{Retry?}
+    retry -->|Yes| authCard
+    retry -->|No| fail[Payment Failed]
+    capture --> record[Record Transaction]
+    record --> webhook[Send Webhook]
+    webhook --> done[Payment Complete]
+
+    subgraph stripe[Stripe Integration]
+        authCard
+        capture
+        gateway
+    end
+
+    subgraph internal[Internal Processing]
+        record
+        webhook
+    end

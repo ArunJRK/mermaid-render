@@ -394,6 +394,24 @@ export class MermaidRenderer {
     }
   }
 
+  // ── Philosophy ───────────────────────────────────────────
+
+  /**
+   * Switch layout philosophy without re-parsing. Preserves fold state.
+   */
+  setPhilosophy(philosophy: string): void {
+    this._currentPhilosophy = philosophy
+
+    // Update background
+    if (this._app) {
+      const theme = getTheme(philosophy as any)
+      this._app.renderer.background.color = theme.background
+    }
+
+    // Re-layout with new philosophy, preserving fold state
+    this._relayout()
+  }
+
   // ── Fold ─────────────────────────────────────────────────
 
   foldNode(id: string): void {

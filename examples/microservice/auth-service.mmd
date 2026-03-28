@@ -1,0 +1,32 @@
+%% @layout narrative
+
+graph TD
+    authFlow[Auth Request] --> checkToken{Has Token?}
+    checkToken -->|Yes| validateToken[Validate JWT]
+    checkToken -->|No| login[Login Flow]
+    login --> credentials[Check Credentials]
+    credentials --> mfa{MFA Required?}
+    mfa -->|Yes| sendCode[Send MFA Code]
+    sendCode --> verifyCode[Verify Code]
+    mfa -->|No| issueToken[Issue JWT]
+    verifyCode --> issueToken
+    validateToken --> expired{Token Expired?}
+    expired -->|Yes| refresh[Refresh Token]
+    expired -->|No| authorized[Authorized]
+    refresh --> issueToken
+    issueToken --> authorized
+
+    subgraph authentication[Authentication]
+        login
+        credentials
+        mfa
+        sendCode
+        verifyCode
+    end
+
+    subgraph tokens[Token Management]
+        validateToken
+        expired
+        refresh
+        issueToken
+    end

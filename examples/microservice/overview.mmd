@@ -1,0 +1,48 @@
+%% @layout map
+%% @link OrderSvc -> /examples/microservice/order-service.mmd#orderFlow
+%% @link PaymentSvc -> /examples/microservice/payment-service.mmd#paymentFlow
+%% @link Auth -> /examples/microservice/auth-service.mmd#authFlow
+
+graph TD
+    Client[Web Client] --> Gateway[API Gateway]
+    Mobile[Mobile App] --> Gateway
+    Gateway --> Auth[Auth Service]
+    Gateway --> UserSvc[User Service]
+    Gateway --> OrderSvc[Order Service]
+    Gateway --> NotifSvc[Notification Service]
+
+    Auth --> Redis[(Redis Cache)]
+    Auth --> UserDB[(User DB)]
+
+    OrderSvc --> OrderDB[(Order DB)]
+    OrderSvc --> PaymentSvc[Payment Service]
+    OrderSvc --> InventorySvc[Inventory Service]
+
+    NotifSvc --> Email[Email Provider]
+    NotifSvc --> Push[Push Service]
+
+    subgraph frontend[Frontend Layer]
+        Client
+        Mobile
+    end
+
+    subgraph api[API Layer]
+        Gateway
+        Auth
+    end
+
+    subgraph core[Core Services]
+        UserSvc
+        OrderSvc
+        NotifSvc
+    end
+
+    subgraph payments[Payment Processing]
+        PaymentSvc
+    end
+
+    subgraph data[Data Stores]
+        Redis
+        UserDB
+        OrderDB
+    end
