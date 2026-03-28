@@ -180,7 +180,7 @@ export class BlueprintLayout implements LayoutEngine {
   private _resolveOverlaps(nodes: Map<string, PositionedNode>): void {
     const nodeList = Array.from(nodes.values())
     const maxIterations = 20
-    const MIN_MARGIN = GRID_SIZE * 1.5 // minimum gap between any two nodes
+    const MIN_MARGIN = GRID_SIZE * 2 // minimum 40px gap between any two nodes
 
     for (let iter = 0; iter < maxIterations; iter++) {
       let hasOverlap = false

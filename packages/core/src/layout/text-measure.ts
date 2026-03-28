@@ -4,8 +4,8 @@
  * More accurate than the old `length * 8` estimate.
  */
 
-const AVG_CHAR_WIDTH_PROPORTIONAL = 7.5  // Inter/system font at 14px
-const AVG_CHAR_WIDTH_MONOSPACE = 8.4     // JetBrains Mono at 14px
+const AVG_CHAR_WIDTH_PROPORTIONAL = 9.0  // Conservative: BitmapText renders wider than CSS
+const AVG_CHAR_WIDTH_MONOSPACE = 9.5     // JetBrains Mono BitmapText
 const WIDE_CHARS = /[WMQODHNG@]/g       // Characters wider than average
 const NARROW_CHARS = /[iljt1!|:;,.]/g   // Characters narrower than average
 
