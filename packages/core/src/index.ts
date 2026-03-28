@@ -1,2 +1,7 @@
-// Placeholder exports — will be populated as modules are built
+export { MermaidRenderer } from './renderer/mermaid-renderer'
+export { buildGraph } from './parser/graph-builder'
+export { extractDirectives } from './parser/directive-extractor'
+export { DagreLayout } from './layout/dagre-layout'
+export { LoadPipeline } from './renderer/load-pipeline'
+export { FoldManager } from './interaction/fold-manager'
 export type * from './types'
