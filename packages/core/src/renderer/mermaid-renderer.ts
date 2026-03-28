@@ -392,9 +392,9 @@ export class MermaidRenderer {
 
     // Blueprint: create wire registry and draw bus lines
     let edgesToRender = positioned.edges
-    const wireReg = new WireRegistry((theme as any).gridSize ?? 20)
+    let wireReg: WireRegistry | undefined
     if (isBlueprint && this._graph) {
-      // Register all nodes as obstacles
+      wireReg = new WireRegistry((theme as any).gridSize ?? 20)
       wireReg.registerNodeObstacles(positioned.nodes)
 
       const edgeCounts = new Map<string, number>()

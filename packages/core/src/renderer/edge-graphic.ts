@@ -12,8 +12,6 @@ const ARROW_SIZE = 8
 export class EdgeGraphic extends Graphics {
   readonly data: PositionedEdge
   private _labelText: BitmapText | null = null
-  private _wireRegistry?: WireRegistry
-
   /** Orthogonal wire segments (set by Blueprint mode, read by wire-hop detector) */
   orthogonalSegments?: WireSegment[]
 
@@ -23,7 +21,6 @@ export class EdgeGraphic extends Graphics {
    */
   constructor(edge: PositionedEdge, theme: Theme, allNodes?: Map<string, PositionedNode>, philosophy?: string, edgeIndex = 0, totalEdges = 1, allSubgraphs?: Map<string, { x: number; y: number; width: number; height: number }>, wireRegistry?: WireRegistry) {
     super()
-    this._wireRegistry = wireRegistry
     if (allNodes && philosophy !== 'blueprint') {
       edge = this._applyCollisionAvoidance(edge, allNodes)
     }
