@@ -2,10 +2,13 @@ import { BitmapFont } from 'pixi.js'
 
 let installed = false
 
+// Printable ASCII range for pre-rendering
+const ASCII_CHARS = ' !"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~'
+
 /**
  * Install dynamic BitmapFonts for use in the renderer.
  * PixiJS 8 generates these from system fonts at runtime — no pre-built atlas needed.
- * SDF-based rendering keeps text crisp at any zoom level.
+ * Text stays crisp at any zoom level.
  */
 export function ensureFontsInstalled(): void {
   if (installed) return
@@ -15,10 +18,10 @@ export function ensureFontsInstalled(): void {
     name: 'MermaidNode',
     style: {
       fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-      fontSize: 28, // Render at 2x for crisp scaling
+      fontSize: 28,
       fill: 0xf1f5f9,
     },
-    chars: BitmapFont.ASCII,
+    chars: ASCII_CHARS.split(''),
   })
 
   BitmapFont.install({
@@ -29,7 +32,7 @@ export function ensureFontsInstalled(): void {
       fill: 0x94a3b8,
       fontWeight: 'bold',
     },
-    chars: BitmapFont.ASCII,
+    chars: ASCII_CHARS.split(''),
   })
 
   BitmapFont.install({
@@ -39,6 +42,6 @@ export function ensureFontsInstalled(): void {
       fontSize: 22,
       fill: 0xcbd5e1,
     },
-    chars: BitmapFont.ASCII,
+    chars: ASCII_CHARS.split(''),
   })
 }

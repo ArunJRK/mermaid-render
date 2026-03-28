@@ -2,12 +2,13 @@ import { Container, Graphics, BitmapText } from 'pixi.js'
 import type { PositionedSubgraph } from '../types'
 import { ensureFontsInstalled } from './fonts'
 
-const BG_COLOR = 0x334155
-const BG_ALPHA = 0.25
-const BORDER_COLOR = 0x475569
-const LABEL_COLOR = 0x94a3b8
+const BG_COLOR = 0x1e3a5f
+const BG_ALPHA = 0.35
+const BORDER_COLOR = 0x60a5fa
+const BORDER_ALPHA = 0.6
+const LABEL_COLOR = 0xbfdbfe
 const CORNER_RADIUS = 12
-const LABEL_PADDING = 8
+const LABEL_PADDING = 10
 
 /**
  * Visual container for a subgraph — semi-transparent rounded rect with a label.
@@ -34,8 +35,12 @@ export class SubgraphContainer extends Container {
     this._bg
       .roundRect(-hw, -hh, subgraph.width, subgraph.height, CORNER_RADIUS)
       .fill({ color: BG_COLOR, alpha: BG_ALPHA })
-      .stroke({ width: 1, color: BORDER_COLOR, alpha: 0.5 })
+      .stroke({ width: 1.5, color: BORDER_COLOR, alpha: BORDER_ALPHA })
     this.addChild(this._bg)
+
+    // Make interactive for fold/unfold on double-click
+    this.eventMode = 'static'
+    this.cursor = 'pointer'
 
     // Label at top-left — BitmapText stays crisp at any zoom
     ensureFontsInstalled()
