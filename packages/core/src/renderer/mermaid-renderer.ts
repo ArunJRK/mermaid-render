@@ -1092,9 +1092,18 @@ export class MermaidRenderer {
       busGfx.moveTo(minBusX, busY)
       busGfx.lineTo(maxBusX, busY)
 
-      // Fan-out: each target gets a clear vertical lane
+      // Fan-out: each target gets a UNIQUE vertical lane
+      const usedLanes = new Set<number>()
+      usedLanes.add(trunkX) // trunk already uses this lane
       for (const tgt of targets) {
-        const dropX = this._findClearVerticalLane(tgt.x, busY, tgt.y, positioned, excludeIds, gridSize)
+        let dropX = this._findClearVerticalLane(tgt.x, busY, tgt.y, positioned, excludeIds, gridSize)
+        // Ensure this lane isn't already used by another fan-out drop
+        while (usedLanes.has(dropX)) {
+          dropX += gridSize
+          dropX = Math.round(dropX / gridSize) * gridSize
+        }
+        usedLanes.add(dropX)
+
         busGfx.moveTo(dropX, busY)
         busGfx.lineTo(dropX, tgt.y)
         if (dropX !== tgt.x) busGfx.lineTo(tgt.x, tgt.y)
