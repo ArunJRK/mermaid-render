@@ -23,6 +23,7 @@ import { LinkPreview } from './link-preview'
 import { LayoutAnimator } from './layout-animator'
 import { WireRegistry } from './wire-registry'
 import { drawWireHops } from './wire-hops'
+import type { WireSegment } from './wire-hops'
 import { ensureFontsInstalled } from './fonts'
 
 /**
@@ -417,11 +418,18 @@ export class MermaidRenderer {
       this._viewport.addChild(eg)
     }
 
-    // Blueprint: wire crossing hops
+    // Blueprint: wire crossing hops — drawn after all edges so we can detect crossings
     if (isBlueprint) {
       const edgeSegments = this._edgeGraphics
         .filter(eg => eg.orthogonalSegments != null)
         .map(eg => ({ edgeId: eg.data.id, segments: eg.orthogonalSegments! }))
+      // Include bus line segments
+      for (const [srcId, busGfx] of this._busGraphics) {
+        const segs: WireSegment[] = (busGfx as any)._wireSegments ?? []
+        if (segs.length > 0) {
+          edgeSegments.push({ edgeId: `bus:${srcId}`, segments: segs })
+        }
+      }
       if (edgeSegments.length > 0) {
         const hopGraphic = drawWireHops(edgeSegments, theme)
         this._viewport.addChild(hopGraphic)
@@ -712,6 +720,13 @@ export class MermaidRenderer {
       const edgeSegments = this._edgeGraphics
         .filter(eg => eg.orthogonalSegments != null)
         .map(eg => ({ edgeId: eg.data.id, segments: eg.orthogonalSegments! }))
+      // Include bus line segments
+      for (const [srcId, busGfx] of this._busGraphics) {
+        const segs: WireSegment[] = (busGfx as any)._wireSegments ?? []
+        if (segs.length > 0) {
+          edgeSegments.push({ edgeId: `bus:${srcId}`, segments: segs })
+        }
+      }
       if (edgeSegments.length > 0) {
         const hopGraphic = drawWireHops(edgeSegments, theme)
         this._viewport.addChild(hopGraphic)
@@ -1092,15 +1107,24 @@ export class MermaidRenderer {
       wireReg?.claimHorizontal(busY, minBusX, maxBusX)
 
       const busGfx = new Graphics()
+      const busSegments: WireSegment[] = []
 
       // Trunk: source → trunkX → busY
       busGfx.moveTo(srcNode.x, srcPortY)
       if (trunkX !== srcNode.x) busGfx.lineTo(trunkX, srcPortY)
       busGfx.lineTo(trunkX, busY)
 
+      // Record trunk segments
+      if (trunkX !== srcNode.x) {
+        busSegments.push({ x1: srcNode.x, y1: srcPortY, x2: trunkX, y2: srcPortY, isHorizontal: true, edgeId: `bus:${sourceId}` })
+      }
+      busSegments.push({ x1: trunkX, y1: srcPortY, x2: trunkX, y2: busY, isHorizontal: false, edgeId: `bus:${sourceId}` })
+
       // Horizontal bus
       busGfx.moveTo(minBusX, busY)
       busGfx.lineTo(maxBusX, busY)
+
+      busSegments.push({ x1: minBusX, y1: busY, x2: maxBusX, y2: busY, isHorizontal: true, edgeId: `bus:${sourceId}` })
 
       // Fan-out: each target gets a globally unique vertical lane via registry
       for (const tgt of targets) {
@@ -1117,9 +1141,15 @@ export class MermaidRenderer {
           wireReg?.claimHorizontal(tgt.y, dropX, tgt.x)
           busGfx.lineTo(tgt.x, tgt.y)
         }
+
+        busSegments.push({ x1: dropX, y1: busY, x2: dropX, y2: tgt.y, isHorizontal: false, edgeId: `bus:${sourceId}` })
+        if (dropX !== tgt.x) {
+          busSegments.push({ x1: dropX, y1: tgt.y, x2: tgt.x, y2: tgt.y, isHorizontal: true, edgeId: `bus:${sourceId}` })
+        }
       }
 
       busGfx.stroke({ width: 1.5, color })
+      ;(busGfx as any)._wireSegments = busSegments
       ;(busGfx as any)._targetIds = targets.map(t => t.id)
       this._busGraphics.set(sourceId, busGfx)
       this._viewport.addChild(busGfx)
