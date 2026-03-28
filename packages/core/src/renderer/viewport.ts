@@ -4,6 +4,12 @@ const MIN_ZOOM = 0.1
 const MAX_ZOOM = 5.0
 const ZOOM_FACTOR = 0.001
 
+export interface ViewportTarget {
+  x: number
+  y: number
+  zoom: number
+}
+
 /**
  * Viewport container that supports zoom (wheel) and pan (drag on empty space).
  * Zoom targets the cursor position so the point under the cursor stays fixed.
@@ -11,6 +17,9 @@ const ZOOM_FACTOR = 0.001
 export class Viewport extends Container {
   /** Current zoom level (1 = 100%). */
   _zoom = 1
+
+  /** Called whenever the zoom level changes (for semantic zoom). */
+  onZoomChange: ((zoom: number) => void) | null = null
 
   private _isPanning = false
   private _panStartX = 0
@@ -24,6 +33,9 @@ export class Viewport extends Container {
   private _onWheel: ((e: WheelEvent) => void) | null = null
   private _onPointerMove: ((e: PointerEvent) => void) | null = null
   private _onPointerUp: ((e: PointerEvent) => void) | null = null
+
+  // Animation state
+  private _animationId: number | null = null
 
   /**
    * Attach wheel/pointer listeners to the given canvas element.
@@ -83,6 +95,80 @@ export class Viewport extends Container {
     this.scale.set(this._zoom)
     this.x = (cw - contentWidth * this._zoom) / 2
     this.y = (ch - contentHeight * this._zoom) / 2
+    this.onZoomChange?.(this._zoom)
+  }
+
+  /**
+   * Animate the viewport to fit given content dimensions.
+   */
+  animatedFitToView(contentWidth: number, contentHeight: number, duration = 250): void {
+    if (!this._canvas || contentWidth <= 0 || contentHeight <= 0) return
+    const cw = this._canvas.clientWidth
+    const ch = this._canvas.clientHeight
+    const padding = 40
+    const scaleX = (cw - padding * 2) / contentWidth
+    const scaleY = (ch - padding * 2) / contentHeight
+    let zoom = Math.min(scaleX, scaleY, MAX_ZOOM)
+    zoom = Math.max(zoom, MIN_ZOOM)
+    const tx = (cw - contentWidth * zoom) / 2
+    const ty = (ch - contentHeight * zoom) / 2
+    this.animateTo({ x: tx, y: ty, zoom }, duration)
+  }
+
+  /**
+   * Animate the viewport to center on a specific region (world coordinates).
+   * The region is defined by center (cx, cy) and dimensions (w, h).
+   */
+  animateToRegion(cx: number, cy: number, w: number, h: number, duration = 250): void {
+    if (!this._canvas) return
+    const cw = this._canvas.clientWidth
+    const ch = this._canvas.clientHeight
+    const padding = 60
+    const scaleX = (cw - padding * 2) / w
+    const scaleY = (ch - padding * 2) / h
+    let zoom = Math.min(scaleX, scaleY, MAX_ZOOM)
+    zoom = Math.max(zoom, MIN_ZOOM)
+
+    // Position so the region center maps to the canvas center
+    const tx = cw / 2 - cx * zoom
+    const ty = ch / 2 - cy * zoom
+
+    this.animateTo({ x: tx, y: ty, zoom }, duration)
+  }
+
+  /**
+   * Smoothly animate viewport to a target position and zoom using ease-out cubic.
+   */
+  animateTo(target: ViewportTarget, duration: number): void {
+    // Cancel any running animation
+    if (this._animationId !== null) {
+      cancelAnimationFrame(this._animationId)
+      this._animationId = null
+    }
+
+    const start: ViewportTarget = { x: this.x, y: this.y, zoom: this._zoom }
+    const startTime = performance.now()
+
+    const tick = () => {
+      const elapsed = performance.now() - startTime
+      const t = Math.min(1, elapsed / duration)
+      // ease-out cubic: 1 - (1 - t)^3
+      const ease = 1 - Math.pow(1 - t, 3)
+
+      this.x = start.x + (target.x - start.x) * ease
+      this.y = start.y + (target.y - start.y) * ease
+      this._zoom = start.zoom + (target.zoom - start.zoom) * ease
+      this.scale.set(this._zoom)
+      this.onZoomChange?.(this._zoom)
+
+      if (t < 1) {
+        this._animationId = requestAnimationFrame(tick)
+      } else {
+        this._animationId = null
+      }
+    }
+
+    this._animationId = requestAnimationFrame(tick)
   }
 
   /**
@@ -93,12 +179,18 @@ export class Viewport extends Container {
     this.scale.set(1)
     this.x = 0
     this.y = 0
+    this.onZoomChange?.(this._zoom)
   }
 
   /**
    * Remove all DOM event listeners. Call when destroying the renderer.
    */
   cleanup(): void {
+    if (this._animationId !== null) {
+      cancelAnimationFrame(this._animationId)
+      this._animationId = null
+    }
+
     if (this._canvas && this._onWheel) {
       this._canvas.removeEventListener('wheel', this._onWheel)
     }
@@ -129,5 +221,6 @@ export class Viewport extends Container {
 
     this._zoom = newZoom
     this.scale.set(newZoom)
+    this.onZoomChange?.(this._zoom)
   }
 }

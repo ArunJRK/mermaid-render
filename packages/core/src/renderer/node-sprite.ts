@@ -67,6 +67,33 @@ export class NodeSprite extends Container {
     this._hoverGfx.alpha = selected ? 1 : 0
   }
 
+  /**
+   * Update visibility of detail elements based on semantic zoom level.
+   * @param zoom Current viewport zoom level.
+   */
+  updateDetailLevel(zoom: number): void {
+    if (zoom < 0.4) {
+      // Subgraphs-only mode: hide nodes entirely or show as tiny dots
+      this._label.visible = false
+      this._gfx.alpha = 0.3
+    } else if (zoom < 0.8) {
+      // Dots mode: show shapes but not labels
+      this._label.visible = false
+      this._gfx.alpha = 0.6 + (zoom - 0.4) * 1.0 // 0.6 to 1.0
+    } else if (zoom < 1.2) {
+      // Fade in labels
+      this._label.visible = true
+      const labelAlpha = (zoom - 0.8) / 0.4 // 0 to 1 across 0.8-1.2
+      this._label.alpha = Math.min(1, Math.max(0, labelAlpha))
+      this._gfx.alpha = 1
+    } else {
+      // Full detail
+      this._label.visible = true
+      this._label.alpha = 1
+      this._gfx.alpha = 1
+    }
+  }
+
   private _drawHoverGlow(shape: NodeShape, w: number, h: number): void {
     const hw = w / 2
     const hh = h / 2

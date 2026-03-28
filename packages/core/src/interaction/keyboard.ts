@@ -1,6 +1,7 @@
 const keyMap: Record<string, string> = {
   f: 'fitToView',
   r: 'resetView',
+  Escape: 'focusOut',
 }
 
 /**

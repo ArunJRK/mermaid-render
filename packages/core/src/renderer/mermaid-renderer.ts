@@ -37,7 +37,14 @@ export class MermaidRenderer {
   private _selectedNodeId: string | null = null
   private _nodeSprites = new Map<string, NodeSprite>()
   private _edgeGraphics: EdgeGraphic[] = []
+  private _subgraphContainers = new Map<string, SubgraphContainer>()
   private _currentPhilosophy: string = 'narrative'
+
+  // Focus navigation state
+  private _focusStack: string[] = []
+
+  // Breadcrumb callback — the consumer provides a function to update breadcrumb UI
+  onBreadcrumbChange: ((segments: Array<{ id: string | null; label: string }>) => void) | null = null
 
   // Bound handlers for cleanup
   private _keyHandler: ((e: KeyboardEvent) => void) | null = null
@@ -67,6 +74,11 @@ export class MermaidRenderer {
     app.stage.addChild(viewport)
     this._viewport = viewport
 
+    // Wire zoom change for semantic zoom
+    viewport.onZoomChange = (zoom: number) => {
+      this._updateDetailLevel(zoom)
+    }
+
     // Wire up background pan: pointerdown on stage that doesn't hit a node
     app.stage.eventMode = 'static'
     app.stage.hitArea = app.screen
@@ -86,6 +98,7 @@ export class MermaidRenderer {
       const action = mapKeyToAction(e.key)
       if (action === 'fitToView') this.fitToView()
       else if (action === 'resetView') this.resetView()
+      else if (action === 'focusOut') this.focusOut()
     }
     window.addEventListener('keydown', this._keyHandler)
   }
@@ -119,6 +132,8 @@ export class MermaidRenderer {
     this._foldManager = null
     this._nodeSprites.clear()
     this._edgeGraphics = []
+    this._subgraphContainers.clear()
+    this._focusStack = []
   }
 
   // ── Loading ──────────────────────────────────────────────
@@ -157,7 +172,11 @@ export class MermaidRenderer {
         this._app.renderer.background.color = theme.background
       }
 
+      // Clear focus stack on load
+      this._focusStack = []
+
       this._renderGraph(result.positioned)
+      this._emitBreadcrumb()
 
       // Emit warnings
       for (const w of result.warnings ?? []) {
@@ -189,7 +208,87 @@ export class MermaidRenderer {
 
     const layout = new DagreLayout()
     this._positioned = layout.compute(graph)
+    this._focusStack = []
     this._renderGraph(this._positioned)
+    this._emitBreadcrumb()
+  }
+
+  // ── Focus Navigation ────────────────────────────────────
+
+  /**
+   * Focus on a subgraph: zoom/pan viewport to center on it,
+   * dim all elements not in the subgraph.
+   */
+  focusSubgraph(id: string): void {
+    if (!this._positioned || !this._graph) return
+    const sg = this._positioned.subgraphs.get(id)
+    if (!sg) return
+
+    this._focusStack.push(id)
+    this._emitter.emit('focus:change', id, this._focusStack.slice())
+
+    // Animate viewport to center on the subgraph
+    if (this._viewport) {
+      this._viewport.animateToRegion(sg.x, sg.y, sg.width, sg.height, 250)
+    }
+
+    // Dim elements not in the focused subgraph
+    this._applyFocusDimming()
+    this._emitBreadcrumb()
+  }
+
+  /**
+   * Pop the focus stack and zoom back out.
+   */
+  focusOut(): void {
+    if (this._focusStack.length === 0) return
+
+    this._focusStack.pop()
+    this._emitter.emit('focus:change', null, this._focusStack.slice())
+
+    if (this._focusStack.length === 0) {
+      // Back to root — restore all opacities and fit view
+      this._restoreAllOpacities()
+      if (this._viewport && this._positioned) {
+        this._viewport.animatedFitToView(this._positioned.width, this._positioned.height, 300)
+      }
+    } else {
+      // Focus on the new top of stack
+      const parentId = this._focusStack[this._focusStack.length - 1]
+      const sg = this._positioned?.subgraphs.get(parentId)
+      if (sg && this._viewport) {
+        this._viewport.animateToRegion(sg.x, sg.y, sg.width, sg.height, 300)
+      }
+      this._applyFocusDimming()
+    }
+    this._emitBreadcrumb()
+  }
+
+  /**
+   * Focus to a specific depth in the stack (for breadcrumb clicks).
+   * depth=0 means root (clear focus), depth=1 means first focus, etc.
+   */
+  focusTo(depth: number): void {
+    while (this._focusStack.length > depth) {
+      this._focusStack.pop()
+    }
+
+    this._emitter.emit('focus:change', null, this._focusStack.slice())
+
+    if (this._focusStack.length === 0) {
+      this._restoreAllOpacities()
+      if (this._viewport && this._positioned) {
+        this._viewport.animatedFitToView(this._positioned.width, this._positioned.height, 300)
+      }
+    } else {
+      const currentId = this._focusStack[this._focusStack.length - 1]
+      const sg = this._positioned?.subgraphs.get(currentId)
+      if (sg && this._viewport) {
+        this._viewport.animateToRegion(sg.x, sg.y, sg.width, sg.height, 300)
+      }
+      this._applyFocusDimming()
+    }
+    this._emitBreadcrumb()
   }
 
   // ── Fold ─────────────────────────────────────────────────
@@ -267,6 +366,9 @@ export class MermaidRenderer {
 
   resetView(): void {
     this._viewport?.resetView()
+    this._focusStack = []
+    this._restoreAllOpacities()
+    this._emitBreadcrumb()
   }
 
   // ── Events ───────────────────────────────────────────────
@@ -290,6 +392,7 @@ export class MermaidRenderer {
     this._viewport.removeChildren()
     this._nodeSprites.clear()
     this._edgeGraphics = []
+    this._subgraphContainers.clear()
 
     // Compute nesting depth for each subgraph (larger subgraphs containing smaller ones = deeper)
     const sgDepths = new Map<string, number>()
@@ -309,19 +412,34 @@ export class MermaidRenderer {
       sgDepths.set(sgId, depth)
     }
 
-    // Draw subgraphs — largest (depth 0) first, smallest (deepest) on top. Wire click to fold/unfold.
+    // Draw subgraphs — largest (depth 0) first, smallest (deepest) on top.
+    // Single-click = focus navigation, double-click = fold/unfold.
     for (const [sgId, sg] of sortedSgs) {
       const depth = sgDepths.get(sgId) ?? 0
       const sgc = new SubgraphContainer(sg, theme, depth)
+      this._subgraphContainers.set(sgId, sgc)
 
+      // Single click = focus into subgraph
       sgc.on('pointertap', () => {
         if (!this._graph?.subgraphs.has(sgId)) return
-        const sub = this._graph.subgraphs.get(sgId)!
-        if (sub.collapsed) {
-          this.unfoldNode(sgId)
-        } else {
-          this.foldNode(sgId)
+        this.focusSubgraph(sgId)
+      })
+
+      // Double-click = fold/unfold (power user)
+      let lastTapTime = 0
+      sgc.on('pointertap', () => {
+        const now = Date.now()
+        if (now - lastTapTime < 300) {
+          // Double-click detected
+          if (!this._graph?.subgraphs.has(sgId)) return
+          const sub = this._graph.subgraphs.get(sgId)!
+          if (sub.collapsed) {
+            this.unfoldNode(sgId)
+          } else {
+            this.foldNode(sgId)
+          }
         }
+        lastTapTime = now
       })
 
       this._viewport.addChild(sgc)
@@ -387,8 +505,105 @@ export class MermaidRenderer {
       })
     }
 
+    // Apply initial detail level
+    if (this._viewport) {
+      this._updateDetailLevel(this._viewport._zoom)
+    }
+
+    // Re-apply focus dimming if we have an active focus
+    if (this._focusStack.length > 0) {
+      this._applyFocusDimming()
+    }
+
     // Auto-fit after rendering
     this.fitToView()
+  }
+
+  /**
+   * Update semantic zoom detail levels on all elements.
+   */
+  private _updateDetailLevel(zoom: number): void {
+    for (const sprite of this._nodeSprites.values()) {
+      sprite.updateDetailLevel(zoom)
+    }
+    for (const sgc of this._subgraphContainers.values()) {
+      sgc.updateDetailLevel(zoom)
+    }
+    // Hide edges at very low zoom
+    for (const eg of this._edgeGraphics) {
+      if (zoom < 0.4) {
+        eg.visible = false
+      } else {
+        eg.visible = true
+        eg.alpha = zoom < 0.8 ? (zoom - 0.4) / 0.4 : 1
+      }
+    }
+  }
+
+  /**
+   * Apply focus dimming: dim all elements not in the currently focused subgraph.
+   */
+  private _applyFocusDimming(): void {
+    if (this._focusStack.length === 0) return
+    const focusedId = this._focusStack[this._focusStack.length - 1]
+    const focusedSg = this._graph?.subgraphs.get(focusedId)
+    if (!focusedSg) return
+
+    const theme = getTheme(this._currentPhilosophy as any)
+    const focusedNodeIds = new Set(focusedSg.nodeIds)
+
+    // Dim nodes not in focused subgraph
+    for (const [id, sprite] of this._nodeSprites) {
+      sprite.alpha = focusedNodeIds.has(id) ? 1 : theme.dimmedAlpha
+    }
+
+    // Dim subgraph containers not the focused one
+    for (const [id, sgc] of this._subgraphContainers) {
+      sgc.alpha = id === focusedId ? 1 : theme.dimmedAlpha
+    }
+
+    // Dim edges not connecting nodes within the focused subgraph
+    for (const eg of this._edgeGraphics) {
+      const srcIn = focusedNodeIds.has(eg.data.source)
+      const tgtIn = focusedNodeIds.has(eg.data.target)
+      eg.alpha = (srcIn && tgtIn) ? 1 : theme.dimmedAlpha
+    }
+  }
+
+  /**
+   * Restore all element opacities to full.
+   */
+  private _restoreAllOpacities(): void {
+    for (const sprite of this._nodeSprites.values()) {
+      sprite.alpha = 1
+    }
+    for (const sgc of this._subgraphContainers.values()) {
+      sgc.alpha = 1
+    }
+    for (const eg of this._edgeGraphics) {
+      eg.alpha = 1
+    }
+  }
+
+  /**
+   * Emit breadcrumb state to the consumer callback.
+   */
+  private _emitBreadcrumb(): void {
+    if (!this.onBreadcrumbChange) return
+
+    const segments: Array<{ id: string | null; label: string }> = [
+      { id: null, label: 'Root' },
+    ]
+
+    for (const sgId of this._focusStack) {
+      const sg = this._graph?.subgraphs.get(sgId)
+      segments.push({
+        id: sgId,
+        label: sg?.label ?? sgId,
+      })
+    }
+
+    this.onBreadcrumbChange(segments)
   }
 
   /**
