@@ -1,4 +1,5 @@
 import dagre from '@dagrejs/dagre'
+import { computeNodeWidth } from './text-measure'
 import type {
   RenderGraph,
   RenderEdge,
@@ -110,7 +111,7 @@ export class NarrativeLayout implements LayoutEngine {
           break
       }
 
-      const width = Math.max(cfg.nodeMinWidth, node.label.length * 8 + cfg.nodePadding * 2)
+      const width = computeNodeWidth(node.label, cfg.nodeMinWidth, cfg.nodePadding)
       const height = cfg.nodeMinHeight
 
       positionedNodes.set(id, {
@@ -355,7 +356,7 @@ export class NarrativeLayout implements LayoutEngine {
     for (const [id, node] of graph.nodes) {
       g.setNode(id, {
         label: node.label,
-        width: Math.max(cfg.nodeMinWidth, node.label.length * 8 + cfg.nodePadding * 2),
+        width: computeNodeWidth(node.label, cfg.nodeMinWidth, cfg.nodePadding),
         height: cfg.nodeMinHeight,
       })
     }

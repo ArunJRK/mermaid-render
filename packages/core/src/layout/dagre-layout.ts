@@ -1,4 +1,5 @@
 import dagre from '@dagrejs/dagre'
+import { computeNodeWidth } from './text-measure'
 import type {
   RenderGraph,
   RenderEdge,
@@ -157,7 +158,7 @@ export class DagreLayout implements LayoutEngine {
       const node = graph.nodes.get(nid)!
       clusterG.setNode(nid, {
         label: node.label,
-        width: Math.max(cfg.nodeMinWidth, node.label.length * 8 + cfg.nodePadding * 2),
+        width: computeNodeWidth(node.label, cfg.nodeMinWidth, cfg.nodePadding),
         height: cfg.nodeMinHeight,
       })
     }
@@ -168,7 +169,7 @@ export class DagreLayout implements LayoutEngine {
       const summaryLabel = `▶ ${sg.label} (${sg.nodeIds.length})`
       clusterG.setNode(sgId, {
         label: summaryLabel,
-        width: Math.max(cfg.nodeMinWidth * 1.5, summaryLabel.length * 8 + cfg.nodePadding * 2),
+        width: computeNodeWidth(summaryLabel, cfg.nodeMinWidth * 1.5, cfg.nodePadding),
         height: cfg.nodeMinHeight * 1.2,
       })
     }
@@ -353,7 +354,7 @@ export class DagreLayout implements LayoutEngine {
       if (!node) continue
       g.setNode(nid, {
         label: node.label,
-        width: Math.max(cfg.nodeMinWidth, node.label.length * 8 + cfg.nodePadding * 2),
+        width: computeNodeWidth(node.label, cfg.nodeMinWidth, cfg.nodePadding),
         height: cfg.nodeMinHeight,
       })
     }
@@ -453,7 +454,7 @@ export class DagreLayout implements LayoutEngine {
       if (hiddenNodeIds.has(id)) continue
       g.setNode(id, {
         label: node.label,
-        width: Math.max(cfg.nodeMinWidth, node.label.length * 8 + cfg.nodePadding * 2),
+        width: computeNodeWidth(node.label, cfg.nodeMinWidth, cfg.nodePadding),
         height: cfg.nodeMinHeight,
       })
 
@@ -470,7 +471,7 @@ export class DagreLayout implements LayoutEngine {
       const sg = graph.subgraphs.get(sgId)!
       g.setNode(sgId, {
         label: sg.label,
-        width: Math.max(cfg.nodeMinWidth, sg.label.length * 8 + cfg.nodePadding * 2),
+        width: computeNodeWidth(sg.label, cfg.nodeMinWidth, cfg.nodePadding),
         height: cfg.nodeMinHeight,
       })
     }
