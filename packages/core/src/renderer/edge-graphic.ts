@@ -21,6 +21,11 @@ export class EdgeGraphic extends Graphics {
    */
   constructor(edge: PositionedEdge, theme: Theme, allNodes?: Map<string, PositionedNode>, philosophy?: string, edgeIndex = 0, totalEdges = 1, allSubgraphs?: Map<string, { x: number; y: number; width: number; height: number }>, wireRegistry?: WireRegistry) {
     super()
+    // I15: self-loop guard — skip drawing for edges that loop back to themselves
+    if (edge.source === edge.target) {
+      this.data = edge
+      return
+    }
     if (allNodes && philosophy !== 'blueprint') {
       edge = this._applyCollisionAvoidance(edge, allNodes)
     }
@@ -202,6 +207,16 @@ export class EdgeGraphic extends Graphics {
           midY = Math.round(midY / gridSize) * gridSize
         }
       }
+    }
+
+    // I15: enforce minimum bend separation — no zero-length vertical segments
+    if (Math.abs(midY - srcPort.y) < gridSize) {
+      midY = srcPort.y + (tgtPort.y >= srcPort.y ? gridSize : -gridSize)
+      midY = Math.round(midY / gridSize) * gridSize
+    }
+    if (Math.abs(midY - tgtPort.y) < gridSize) {
+      midY = tgtPort.y + (srcPort.y >= tgtPort.y ? gridSize : -gridSize)
+      midY = Math.round(midY / gridSize) * gridSize
     }
 
     // Find free vertical lanes for source and target segments
