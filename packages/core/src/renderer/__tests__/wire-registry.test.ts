@@ -40,6 +40,31 @@ describe('WireRegistry', () => {
     })
   })
 
+  describe('findFreeVertical expanded search', () => {
+    it('finds free lane beyond default maxSearch when first 15 are occupied', () => {
+      const reg = new WireRegistry(20)
+      // Occupy lanes from x=-200 to x=400 (31 lanes)
+      for (let x = -200; x <= 400; x += 20) {
+        reg.claimVertical(x, 0, 100)
+      }
+      // All 15 lanes each side of x=100 are occupied
+      // With expanded search (30 lanes), it should find beyond x=400 or below x=-200
+      const result = reg.findFreeVertical(100, 0, 100)
+      expect(Math.abs(result - 100)).toBeGreaterThan(300)
+    })
+  })
+
+  describe('findFreeHorizontal expanded search', () => {
+    it('finds free channel beyond default maxSearch', () => {
+      const reg = new WireRegistry(20)
+      for (let y = -200; y <= 400; y += 20) {
+        reg.claimHorizontal(y, 0, 100)
+      }
+      const result = reg.findFreeHorizontal(100, 0, 100)
+      expect(Math.abs(result - 100)).toBeGreaterThan(300)
+    })
+  })
+
   describe('registerNodeObstacles uses COMPONENT_CLEARANCE', () => {
     it('blocks lanes through inflated node bounds', () => {
       const reg = new WireRegistry(20)

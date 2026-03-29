@@ -68,6 +68,13 @@ export class WireRegistry {
       const right = sx + i * this._gridSize
       if (this.isVerticalFree(right, y1, y2)) return right
     }
+    // Expanded search: double the radius before giving up
+    for (let i = maxSearch + 1; i <= maxSearch * 2; i++) {
+      const left = sx - i * this._gridSize
+      if (this.isVerticalFree(left, y1, y2)) return left
+      const right = sx + i * this._gridSize
+      if (this.isVerticalFree(right, y1, y2)) return right
+    }
     return sx // give up
   }
 
@@ -76,6 +83,13 @@ export class WireRegistry {
     const sy = this._snap(targetY)
     if (this.isHorizontalFree(sy, x1, x2)) return sy
     for (let i = 1; i <= maxSearch; i++) {
+      const up = sy - i * this._gridSize
+      if (this.isHorizontalFree(up, x1, x2)) return up
+      const down = sy + i * this._gridSize
+      if (this.isHorizontalFree(down, x1, x2)) return down
+    }
+    // Expanded search: double the radius before giving up
+    for (let i = maxSearch + 1; i <= maxSearch * 2; i++) {
       const up = sy - i * this._gridSize
       if (this.isHorizontalFree(up, x1, x2)) return up
       const down = sy + i * this._gridSize
