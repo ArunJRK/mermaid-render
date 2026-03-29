@@ -396,6 +396,7 @@ export class MermaidRenderer {
     if (isBlueprint && this._graph) {
       wireReg = new WireRegistry((theme as any).gridSize ?? 20)
       wireReg.registerNodeObstacles(positioned.nodes)
+      wireReg.registerSubgraphObstacles(positioned.subgraphs)
 
       const edgeCounts = new Map<string, number>()
       for (const e of positioned.edges) {
@@ -691,6 +692,7 @@ export class MermaidRenderer {
     if (isBlueprint && this._graph) {
       wireReg = new WireRegistry((theme as any).gridSize ?? 20)
       wireReg.registerNodeObstacles(positioned.nodes)
+      wireReg.registerSubgraphObstacles(positioned.subgraphs)
 
       // Find sources with 2+ edges (these become bus lines)
       const edgeCounts = new Map<string, number>()
@@ -1104,6 +1106,9 @@ export class MermaidRenderer {
 
       // Claim trunk + bus in registry so future wires avoid them
       wireReg?.claimVertical(trunkX, srcPortY, busY)
+      if (trunkX !== srcNode.x) {
+        wireReg?.claimHorizontal(srcPortY, srcNode.x, trunkX)
+      }
       wireReg?.claimHorizontal(busY, minBusX, maxBusX)
 
       const busGfx = new Graphics()
