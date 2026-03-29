@@ -22,13 +22,21 @@ Corridor    := vertical strip between two columns of obstacles
 
 ## Clearance Model
 
-PCB convention: wire-to-wire and wire-to-component clearances are distinct.
+PCB convention: three tiers of clearance for three pair types.
 
 ```
-Cw := wire-to-wire clearance     = g (20px, one grid step)
-Cc := wire-to-component clearance = 8px
+Cn := component-to-component clearance = 2g (40px)
+Cw := wire-to-wire clearance           = g  (20px)
+Cc := wire-to-component clearance       = 8px
 
-Cw enforced by: grid alignment + lane exclusivity (I1 + I4)
+Cn > Cw > Cc — strictest between components, loosest between wire and component.
+
+Cn enforced by: layout phase (_resolveOverlaps, MIN_MARGIN = GRID_SIZE * 2)
+  Nodes are pushed apart until no two are closer than Cn.
+  This is a LAYOUT concern — guarantees enough corridor space for wires to route.
+  Cn = 2g means every corridor has room for at least 1 wire track between nodes.
+
+Cw enforced by: grid alignment + lane exclusivity (I1 + I5)
   Two parallel wires on adjacent grid lanes are exactly g apart.
   Lane exclusivity prevents sharing. Therefore min separation = g.
 
@@ -36,10 +44,11 @@ Cc enforced by: obstacle inflation (I2)
   Each obstacle inflated by Cc before registering in the occupancy map.
   No wire can occupy a lane within Cc of any node or subgraph border.
 
-Cw > Cc is expected and correct:
-  Grid step (20px) > component clearance (8px).
-  Wires are spaced further from each other than from components.
-  This matches PCB practice where trace pitch > pad clearance.
+Relationship:
+  Cn = 2g: between two nodes 40px apart, there is room for exactly 1 wire
+           (Cc on each side = 8+8 = 16px, leaving 24px, which fits 1 grid lane).
+  Cw = g:  parallel wires are always a full grid step apart.
+  Cc = 8px: wires can approach components closer than they approach each other.
 ```
 
 ## Current System — How It Works
@@ -344,10 +353,11 @@ Where:
 ## Constants
 
 ```typescript
-const GRID_SIZE = 20                    // g: grid step, also wire-to-wire minimum (Cw)
-const COMPONENT_CLEARANCE = 8           // Cc: wire-to-component clearance
+const GRID_SIZE = 20                        // g: grid step
+const COMPONENT_CLEARANCE = 8               // Cc: wire-to-component clearance
+const NODE_MIN_MARGIN = GRID_SIZE * 2       // Cn: component-to-component clearance (40px)
 // Cw = GRID_SIZE (implicit via grid alignment + lane exclusivity)
-// Cw > Cc is correct: wires are further from each other than from components
+// Cn > Cw > Cc:  40px > 20px > 8px
 ```
 
 ## Priority Fixes to Satisfy Invariants
