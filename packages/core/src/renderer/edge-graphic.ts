@@ -4,6 +4,7 @@ import { ensureFontsInstalled } from './fonts'
 import { lineIntersectsRect, computeWaypoint } from '../layout/blueprint-layout'
 import type { Theme } from './theme'
 import type { WireSegment } from './wire-hops'
+import type { WireSegment as RouterWireSegment } from '../router/types'
 import type { WireRegistry } from './wire-registry'
 
 const DIMMED_ALPHA = 0.12
@@ -34,6 +35,9 @@ export class EdgeGraphic extends Graphics {
     switch (philosophy) {
       case 'blueprint':
         this._drawOrthogonal(edge, theme, edgeIndex, totalEdges, allNodes, wireRegistry)
+        break
+      case 'blueprint-routed':
+        // Segments will be drawn via drawFromSegments() after construction
         break
       case 'breath':
         this._drawWhisper(edge, theme)
@@ -76,6 +80,44 @@ export class EdgeGraphic extends Graphics {
     }
 
     return edge
+  }
+
+  /**
+   * Blueprint A* mode: draw pre-computed wire segments.
+   * Called instead of constructor's _drawOrthogonal when router provides segments.
+   */
+  drawFromSegments(segments: RouterWireSegment[], theme: Theme): void {
+    if (segments.length === 0) return
+    const color = theme.edgeColor
+
+    this.moveTo(segments[0].x1, segments[0].y1)
+    for (const seg of segments) {
+      this.lineTo(seg.x2, seg.y2)
+    }
+    this.stroke({ width: 1.5, color })
+
+    // Record for hop detection
+    this.orthogonalSegments = segments as WireSegment[]
+
+    // Arrow at final segment end
+    const last = segments[segments.length - 1]
+    this._drawArrow([{ x: last.x1, y: last.y1 }, { x: last.x2, y: last.y2 }], color)
+
+    // Label at midpoint
+    if (this.data.label && segments.length > 0) {
+      const midSeg = segments[Math.floor(segments.length / 2)]
+      const mx = (midSeg.x1 + midSeg.x2) / 2
+      const my = (midSeg.y1 + midSeg.y2) / 2
+      ensureFontsInstalled()
+      this._labelText = new BitmapText({
+        text: this.data.label,
+        style: { fontFamily: 'MermaidBlueprint', fontSize: 10 },
+      })
+      this._labelText.anchor.set(0.5)
+      this._labelText.x = mx
+      this._labelText.y = my - 12
+      this.addChild(this._labelText)
+    }
   }
 
   dim(on: boolean): void {

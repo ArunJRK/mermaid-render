@@ -25,6 +25,7 @@ import { WireRegistry } from './wire-registry'
 import { drawWireHops } from './wire-hops'
 import type { WireSegment } from './wire-hops'
 import { ensureFontsInstalled } from './fonts'
+import { BlueprintWireBuilder } from '../router/blueprint-wire-builder'
 
 /**
  * Public API for the mermaid-render engine.
@@ -684,54 +685,36 @@ export class MermaidRenderer {
       this._viewport.addChild(sgc)
     }
 
-    // Blueprint: create wire registry, draw bus lines, filter edges
-    let edgesToDraw = positioned.edges
-    const busSourceIds = new Set<string>()
-    let wireReg: WireRegistry | undefined
+    // Blueprint: A* grid routing
     if (isBlueprint && this._graph) {
-      wireReg = new WireRegistry((theme as any).gridSize ?? 20)
-      wireReg.registerNodeObstacles(positioned.nodes)
-      // Note: subgraph borders are NOT obstacles — wires must cross them freely
-      // to connect nodes across groups. See invariants doc V1 RETRACTED.
+      const builder = new BlueprintWireBuilder(positioned, (theme as any).gridSize ?? 20)
+      const result = builder.route()
 
-      // Find sources with 2+ edges (these become bus lines)
-      const edgeCounts = new Map<string, number>()
-      for (const e of positioned.edges) {
-        edgeCounts.set(e.source, (edgeCounts.get(e.source) ?? 0) + 1)
+      // Draw routed wires
+      for (const wire of result.wires) {
+        const edge = positioned.edges.find(e => e.id === wire.edgeId)
+        if (!edge) continue
+        const eg = new EdgeGraphic(edge, theme, positioned.nodes, 'blueprint-routed')
+        eg.drawFromSegments(wire.segments, theme)
+        this._edgeGraphics.push(eg)
+        this._viewport.addChild(eg)
       }
-      for (const [src, count] of edgeCounts) {
-        if (count >= 2) busSourceIds.add(src)
-      }
 
-      this._busSourceIds = busSourceIds
-      this._busGraphics.clear()
-      this._drawBlueprintBusLines(positioned, theme, busSourceIds, wireReg)
-      edgesToDraw = positioned.edges.filter(e => !busSourceIds.has(e.source))
-    }
-
-    // Draw individual edges
-    let edgeIdx = 0
-    for (const edge of edgesToDraw) {
-      const eg = new EdgeGraphic(edge, theme, positioned.nodes, this._currentPhilosophy, edgeIdx, edgesToDraw.length, undefined, wireReg); edgeIdx++
-      this._edgeGraphics.push(eg)
-      this._viewport.addChild(eg)
-    }
-
-    // Blueprint: wire crossing hops — drawn after all edges so we can detect crossings
-    if (isBlueprint) {
-      const edgeSegments = this._edgeGraphics
-        .filter(eg => eg.orthogonalSegments != null)
-        .map(eg => ({ edgeId: eg.data.id, segments: eg.orthogonalSegments! }))
-      // Include bus line segments
-      for (const [srcId, busGfx] of this._busGraphics) {
-        const segs: WireSegment[] = (busGfx as any)._wireSegments ?? []
-        if (segs.length > 0) {
-          edgeSegments.push({ edgeId: `bus:${srcId}`, segments: segs })
-        }
-      }
-      if (edgeSegments.length > 0) {
-        const hopGraphic = drawWireHops(edgeSegments, theme)
+      // Hop detection from all segments
+      const allSegs = result.wires
+        .filter(w => w.segments.length > 0)
+        .map(w => ({ edgeId: w.edgeId, segments: w.segments as WireSegment[] }))
+      if (allSegs.length > 0) {
+        const hopGraphic = drawWireHops(allSegs, theme)
         this._viewport.addChild(hopGraphic)
+      }
+    } else {
+      // Non-blueprint: original edge drawing
+      let edgeIdx = 0
+      for (const edge of positioned.edges) {
+        const eg = new EdgeGraphic(edge, theme, positioned.nodes, this._currentPhilosophy, edgeIdx, positioned.edges.length); edgeIdx++
+        this._edgeGraphics.push(eg)
+        this._viewport.addChild(eg)
       }
     }
 
