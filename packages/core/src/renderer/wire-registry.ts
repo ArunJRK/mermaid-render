@@ -1,3 +1,6 @@
+/** Wire-to-component clearance (Cc). Used to inflate obstacles. */
+export const COMPONENT_CLEARANCE = 8
+
 /**
  * Global wire lane registry for Blueprint routing.
  * Tracks which grid positions are occupied by wires so no two
@@ -86,8 +89,8 @@ export class WireRegistry {
     for (const [id, node] of nodes) {
       if (excludeIds?.has(id)) continue
       // Block all vertical lanes that pass through this node
-      const hw = node.width / 2 + 8
-      const hh = node.height / 2 + 8
+      const hw = node.width / 2 + COMPONENT_CLEARANCE
+      const hh = node.height / 2 + COMPONENT_CLEARANCE
       const minX = this._snap(node.x - hw)
       const maxX = this._snap(node.x + hw)
       for (let x = minX; x <= maxX; x += this._gridSize) {
@@ -98,6 +101,52 @@ export class WireRegistry {
       const maxY = this._snap(node.y + hh)
       for (let y = minY; y <= maxY; y += this._gridSize) {
         this.claimHorizontal(y, node.x - hw, node.x + hw)
+      }
+    }
+  }
+
+  /** Register subgraph BORDERS (not interiors) as obstacles.
+   *  Only the 4 border strips are blocked, wires can route through the interior.
+   *  Each border blocks both vertical and horizontal lanes that cross it. */
+  registerSubgraphObstacles(subgraphs: Map<string, { x: number; y: number; width: number; height: number }>): void {
+    for (const [, sg] of subgraphs) {
+      const hw = sg.width / 2
+      const hh = sg.height / 2
+      const left = sg.x - hw
+      const right = sg.x + hw
+      const top = sg.y - hh
+      const bottom = sg.y + hh
+
+      // Top border: block horizontal channels AND vertical lanes crossing it
+      for (let y = this._snap(top - COMPONENT_CLEARANCE); y <= this._snap(top + COMPONENT_CLEARANCE); y += this._gridSize) {
+        this.claimHorizontal(y, left - COMPONENT_CLEARANCE, right + COMPONENT_CLEARANCE)
+      }
+      for (let x = this._snap(left - COMPONENT_CLEARANCE); x <= this._snap(right + COMPONENT_CLEARANCE); x += this._gridSize) {
+        this.claimVertical(x, top - COMPONENT_CLEARANCE, top + COMPONENT_CLEARANCE)
+      }
+
+      // Bottom border: block horizontal channels AND vertical lanes crossing it
+      for (let y = this._snap(bottom - COMPONENT_CLEARANCE); y <= this._snap(bottom + COMPONENT_CLEARANCE); y += this._gridSize) {
+        this.claimHorizontal(y, left - COMPONENT_CLEARANCE, right + COMPONENT_CLEARANCE)
+      }
+      for (let x = this._snap(left - COMPONENT_CLEARANCE); x <= this._snap(right + COMPONENT_CLEARANCE); x += this._gridSize) {
+        this.claimVertical(x, bottom - COMPONENT_CLEARANCE, bottom + COMPONENT_CLEARANCE)
+      }
+
+      // Left border: block vertical lanes AND horizontal channels crossing it
+      for (let x = this._snap(left - COMPONENT_CLEARANCE); x <= this._snap(left + COMPONENT_CLEARANCE); x += this._gridSize) {
+        this.claimVertical(x, top - COMPONENT_CLEARANCE, bottom + COMPONENT_CLEARANCE)
+      }
+      for (let y = this._snap(top - COMPONENT_CLEARANCE); y <= this._snap(bottom + COMPONENT_CLEARANCE); y += this._gridSize) {
+        this.claimHorizontal(y, left - COMPONENT_CLEARANCE, left + COMPONENT_CLEARANCE)
+      }
+
+      // Right border: block vertical lanes AND horizontal channels crossing it
+      for (let x = this._snap(right - COMPONENT_CLEARANCE); x <= this._snap(right + COMPONENT_CLEARANCE); x += this._gridSize) {
+        this.claimVertical(x, top - COMPONENT_CLEARANCE, bottom + COMPONENT_CLEARANCE)
+      }
+      for (let y = this._snap(top - COMPONENT_CLEARANCE); y <= this._snap(bottom + COMPONENT_CLEARANCE); y += this._gridSize) {
+        this.claimHorizontal(y, right - COMPONENT_CLEARANCE, right + COMPONENT_CLEARANCE)
       }
     }
   }
