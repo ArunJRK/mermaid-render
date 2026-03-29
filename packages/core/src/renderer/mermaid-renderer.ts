@@ -396,7 +396,6 @@ export class MermaidRenderer {
     if (isBlueprint && this._graph) {
       wireReg = new WireRegistry((theme as any).gridSize ?? 20)
       wireReg.registerNodeObstacles(positioned.nodes)
-      wireReg.registerSubgraphObstacles(positioned.subgraphs)
 
       const edgeCounts = new Map<string, number>()
       for (const e of positioned.edges) {
@@ -692,7 +691,8 @@ export class MermaidRenderer {
     if (isBlueprint && this._graph) {
       wireReg = new WireRegistry((theme as any).gridSize ?? 20)
       wireReg.registerNodeObstacles(positioned.nodes)
-      wireReg.registerSubgraphObstacles(positioned.subgraphs)
+      // Note: subgraph borders are NOT obstacles — wires must cross them freely
+      // to connect nodes across groups. See invariants doc V1 RETRACTED.
 
       // Find sources with 2+ edges (these become bus lines)
       const edgeCounts = new Map<string, number>()

@@ -66,16 +66,21 @@ Render phase:
 
 ## Violations Found (mapped to screenshot artifacts)
 
-### V1: Subgraphs invisible to registry
+### ~~V1: Subgraphs invisible to registry~~ — RETRACTED
 
 ```
-Obstacle set = { nodes }
-Missing:       { subgraph borders }
+MISDIAGNOSIS. Subgraph borders are visual grouping containers, not physical
+obstacles. Wires MUST cross them to connect nodes across groups.
+Blocking borders forces massive detours — strictly worse than the original.
+
+Obstacle set = { nodes } is CORRECT.
+Subgraphs are NOT obstacles.
 ```
 
-**Effect:** Wires route freely through subgraph rectangles. Visible as wires cutting through "Warehouse & Inventory", "Payment Processing", "Core Services" borders.
+**Original claim:** Wires cutting through subgraph borders was a bug.
+**Reality:** That is correct behavior. The visual mess near borders was wire-to-wire congestion, not a border-crossing problem.
 
-**Fix:** Register subgraph borders as obstacles with Cc inflation.
+`registerSubgraphObstacles` remains in WireRegistry for potential future use (e.g., optional "strict borders" mode) but is NOT called during rendering.
 
 ### V2: Trunk horizontal jog not claimed
 
@@ -167,18 +172,21 @@ Where:
 ### I2: Obstacle Avoidance (tiered clearance)
 
 ```
-∀ segment S, ∀ obstacle O ∈ {nodes ∪ subgraphBorders}:
+∀ segment S, ∀ obstacle O ∈ {nodes}:
   ¬intersects(S, O.inflated(Cc))
 
 Where:
   Cc = COMPONENT_CLEARANCE (8px)
   O.inflated(c) := rect(O.cx, O.cy, O.w + 2c, O.h + 2c)
   intersects(S, R) := Liang-Barsky(S.p1, S.p2, R)
+
+Note: Subgraph borders are NOT obstacles. Wires freely cross them.
+      Subgraphs are visual containers, not physical barriers.
 ```
 
-**Guarantees:** No wire penetrates any node or subgraph border. Cc is the wire-to-component clearance — smaller than wire-to-wire (Cw = g) by design.
+**Guarantees:** No wire penetrates any node (with Cc clearance). Cc is the wire-to-component clearance — smaller than wire-to-wire (Cw = g) by design.
 
-**Enforced by:** `registerNodeObstacles` + `registerSubgraphObstacles` blocking lanes through inflated bounds.
+**Enforced by:** `registerNodeObstacles` blocking lanes through inflated node bounds.
 
 ### I3: Wire-to-Wire Separation
 
@@ -455,7 +463,7 @@ const NODE_MIN_MARGIN = GRID_SIZE * 2       // Cn: component-to-component cleara
 
 | Priority | Violation | Invariant | Fix |
 |----------|-----------|-----------|-----|
-| **P0** | V1: Subgraphs not obstacles | I2 | Register subgraph borders with Cc inflation |
+| ~~P0~~ | ~~V1: Subgraphs not obstacles~~ | — | RETRACTED — subgraphs are containers, not obstacles |
 | **P0** | V4: Bus span before drops | I4, I7, I16 | Sequenced drop claim → compute bus extent |
 | **P0** | Registry silent give-up | I1, I14 | `findFree*` expands search or signals failure |
 | **P1** | V2: Trunk jog unclaimed | I1, I13 | Claim horizontal jog in `_drawBlueprintBusLines` |
