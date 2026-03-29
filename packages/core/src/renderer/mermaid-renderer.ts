@@ -1092,25 +1092,46 @@ export class MermaidRenderer {
 
       const minTargetY = Math.min(...targets.map(t => t.y))
 
-      // Use registry to find clear lanes (globally unique)
+      // 1. Find trunkX
       const trunkX = wireReg
         ? wireReg.findFreeVertical(srcNode.x, srcPortY, minTargetY)
         : this._findClearVerticalLane(srcNode.x, srcPortY, minTargetY, positioned, excludeIds, gridSize)
 
-      const minBusX = Math.min(trunkX, ...targets.map(t => t.x))
-      const maxBusX = Math.max(trunkX, ...targets.map(t => t.x))
+      // 2. Find busY using estimated extent
+      const estMinBusX = Math.min(trunkX, ...targets.map(t => t.x))
+      const estMaxBusX = Math.max(trunkX, ...targets.map(t => t.x))
       const baseBusY = Math.round(((srcPortY + minTargetY) / 2) / gridSize) * gridSize
       const busY = wireReg
-        ? wireReg.findFreeHorizontal(baseBusY, minBusX, maxBusX)
+        ? wireReg.findFreeHorizontal(baseBusY, estMinBusX, estMaxBusX)
         : baseBusY
 
-      // Claim trunk + bus in registry so future wires avoid them
+      // 3. Claim trunk vertical + horizontal jog
       wireReg?.claimVertical(trunkX, srcPortY, busY)
       if (trunkX !== srcNode.x) {
         wireReg?.claimHorizontal(srcPortY, srcNode.x, trunkX)
       }
+
+      // 4. Find + claim each drop SEQUENTIALLY — store results
+      const drops: Array<{ tgt: typeof targets[0]; dropX: number }> = []
+      for (const tgt of targets) {
+        const dropX = wireReg
+          ? wireReg.findFreeVertical(tgt.x, busY, tgt.y)
+          : tgt.x
+        wireReg?.claimVertical(dropX, busY, tgt.y)
+        if (dropX !== tgt.x) {
+          wireReg?.claimHorizontal(tgt.y, dropX, tgt.x)
+        }
+        drops.push({ tgt, dropX })
+      }
+
+      // 5. Compute bus extent from actual drop positions (I16)
+      const minBusX = Math.min(trunkX, ...drops.map(d => d.dropX))
+      const maxBusX = Math.max(trunkX, ...drops.map(d => d.dropX))
+
+      // 6. Claim the horizontal bus with corrected extent
       wireReg?.claimHorizontal(busY, minBusX, maxBusX)
 
+      // 7. Draw everything using pre-computed positions
       const busGfx = new Graphics()
       const busSegments: WireSegment[] = []
 
@@ -1131,19 +1152,11 @@ export class MermaidRenderer {
 
       busSegments.push({ x1: minBusX, y1: busY, x2: maxBusX, y2: busY, isHorizontal: true, edgeId: `bus:${sourceId}` })
 
-      // Fan-out: each target gets a globally unique vertical lane via registry
-      for (const tgt of targets) {
-        const dropX = wireReg
-          ? wireReg.findFreeVertical(tgt.x, busY, tgt.y)
-          : tgt.x
-
-        // Claim this drop lane
-        wireReg?.claimVertical(dropX, busY, tgt.y)
-
+      // Fan-out drops: draw using pre-computed positions
+      for (const { tgt, dropX } of drops) {
         busGfx.moveTo(dropX, busY)
         busGfx.lineTo(dropX, tgt.y)
         if (dropX !== tgt.x) {
-          wireReg?.claimHorizontal(tgt.y, dropX, tgt.x)
           busGfx.lineTo(tgt.x, tgt.y)
         }
 
