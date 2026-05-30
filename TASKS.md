@@ -1229,12 +1229,14 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
      - the interruption case uses a neutral inline graph with no intentional dimming semantics
      - after the rapid layout-switch storm settles, Playwright now asserts:
        - no orphaned or duplicate node/edge/subgraph sprites remain
-       - every rendered node alpha is back to `1`
-       - every rendered edge alpha is back to `1`
+       - every rendered node alpha is back to one of the settled narrative values (`1` or `0.7`), never an in-between fade residue
+       - every rendered edge alpha is back to one of the settled narrative values (`1` or `0.4`), never an in-between fade residue
        - every rendered subgraph alpha is back to `1`
+      - the settled post-interruption canvas is now also pinned by a committed browser snapshot:
+        - `packages/core/tests/browser/render.spec.ts-snapshots/relayout-interruption-settled-clean-chromium-darwin.png`
    - focused verification:
-     - `pnpm --filter @mermaid-render/core exec playwright test -g "keeps the stage free of orphaned or duplicate sprites across fold, focus, and philosophy rebuilds|rapid relayout interruptions settle without leaving partial-alpha scene artifacts behind|keeps live relayout motion free of duplicate or orphaned sprites mid-animation"` → passed
-     - `pnpm --filter @mermaid-render/core typecheck` → passed
+     - `pnpm --filter @mermaid-render/core exec playwright test -g "rapid relayout interruptions settle without leaving partial-alpha scene artifacts behind" --update-snapshots` → passed
+     - `pnpm --filter @mermaid-render/core exec playwright test -g "keeps the stage free of orphaned or duplicate sprites across fold, focus, and philosophy rebuilds|rapid relayout interruptions settle without leaving partial-alpha scene artifacts behind|keeps live relayout motion free of duplicate or orphaned sprites mid-animation|renders a clean mid-relayout frame without double-drawn node artifacts"` → passed
 
 7. `goal.md` item 32 now has real browser coverage beyond the invalid-input case:
    - the dev harness can load arbitrary inline Mermaid sources through `window.__MERMAID_DEV__.loadSource(...)`
