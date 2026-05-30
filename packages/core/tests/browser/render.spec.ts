@@ -1079,6 +1079,7 @@ test.describe('demo render pipeline', () => {
     expect(state.edgeCount).toBeGreaterThan(0)
     expect(state.statusLevel).toBe('warn')
     expect(state.statusMessage).toContain('direct wire segments')
+    await expect(page.locator('#canvas')).toHaveScreenshot('blueprint-routing-fallback-warning.png')
     expect(pageErrors).toEqual([])
   })
 

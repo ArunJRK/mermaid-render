@@ -542,6 +542,8 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
        - the fallback edge still renders visibly
        - the status surface reports a warning
        - the warning text explains that direct wire segments were used
+     - the fallback warning state now also has a committed canvas artifact:
+       - `packages/core/tests/browser/render.spec.ts-snapshots/blueprint-routing-fallback-warning-chromium-darwin.png`
 
 20. `goal.md` items 48 and 50 moved forward in the shipped non-Blueprint relayout path:
    - `packages/core/src/renderer/mermaid-renderer.ts`
