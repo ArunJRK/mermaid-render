@@ -936,6 +936,21 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
      - multiple live renderer instances mount and render on one page
      - illegal remount and foreign-canvas ownership failures surface clear errors
      - post-`destroy()` `load()`, `setPhilosophy()`, and `mount()` misuse surfaces clear errors
+     - `destroy()` now has direct browser proof that it clears the renderer-owned lifecycle state:
+       - `_keyHandler`
+       - `_visibilityHandler`
+       - `_pointerActivityHandler`
+       - `_webglContextLostHandler`
+       - `_webglContextRestoredHandler`
+       - `_colorSchemeMediaQuery` / `_colorSchemeChangeHandler`
+       - `_resizeObserver` / `_resizeRafId`
+       - `_idleTickerTimeoutId`
+       - `_linkPreview`
+       - `_app`
+       - `_viewport`
+       - `_canvas`
+     - the same probe also proves the delayed hover-preview timer is cancelled on `destroy()`
+     - and it proves the static live-canvas ownership registry releases the destroyed canvas instead of keeping it reserved
    - item 42:
      - explicit "no usable GPU backend" failure now has direct browser proof for the readable fallback canvas state
      - renderer initialization failure paints a readable fallback state instead of leaving a blank canvas
@@ -1451,6 +1466,21 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
    - added unit proof in `packages/core/src/parser/__tests__/graph-builder.test.ts`
    - added browser proof plus committed fallback snapshot:
      - `unsupported-diagram-type-error-state-chromium-darwin.png`
+
+24. Item `41` teardown proof is stronger on the current tree:
+   - `packages/core/dev/lifecycle-harness.ts`
+     - added `runDestroyCleanupProbe()` for browser-side teardown verification
+   - `packages/core/tests/browser/render.spec.ts`
+     - added `releases listeners, timers, and canvas ownership state on destroy`
+   - focused verification passed:
+     - `pnpm --filter @mermaid-render/core exec playwright test -g "releases listeners, timers, and canvas ownership state on destroy|supports multiple live renderers on one page|guards lifecycle misuse with clear errors"`
+   - lifecycle gate also stayed green:
+     - `pnpm --filter @mermaid-render/core test:browser:lifecycle`
+     - `9` passed
+   - `pnpm --filter @mermaid-render/core typecheck` also passed
+   - important scope note:
+     - the probe intentionally verifies ownership release via the renderer's live-canvas registry state instead of immediately remounting a new renderer onto the exact same physical canvas inside the same browser turn
+     - that narrower check avoids a Chromium/Pixi wedge case while still directly proving the teardown contract we need for item `41`
 
 ## Resume Notes
 

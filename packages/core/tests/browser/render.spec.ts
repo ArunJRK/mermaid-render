@@ -113,6 +113,24 @@ type MultiInstanceProbe = {
   secondRendererNodeCount: number
 }
 
+type DestroyCleanupProbe = {
+  keyHandlerReleased: boolean
+  visibilityHandlerReleased: boolean
+  pointerActivityHandlerReleased: boolean
+  contextLostHandlerReleased: boolean
+  contextRestoredHandlerReleased: boolean
+  colorSchemeListenerReleased: boolean
+  resizeObserverReleased: boolean
+  resizeRafCleared: boolean
+  previewTimerCancelled: boolean
+  idleTimerCleared: boolean
+  linkPreviewReleased: boolean
+  appReleased: boolean
+  viewportReleased: boolean
+  canvasReleased: boolean
+  canvasOwnershipReleased: boolean
+}
+
 type ContextRecoveryProbe = {
   initialNodeCount: number
   recoveredNodeCount: number
@@ -3181,6 +3199,33 @@ graph TD
     expect(probe.loadAfterDestroyError).toContain('after destroy()')
     expect(probe.setPhilosophyAfterDestroyError).toContain('after destroy()')
     expect(probe.mountAfterDestroyError).toContain('destroyed')
+    expect(pageErrors).toEqual([])
+  })
+
+  test('releases listeners, timers, and canvas ownership state on destroy', async ({ page }) => {
+    const pageErrors = await attachPageErrorTracking(page)
+    await page.goto('/lifecycle-harness.html')
+    await page.waitForFunction(() => Boolean((window as any).__LIFECYCLE_HARNESS__))
+
+    const probe = await page.evaluate(async (): Promise<DestroyCleanupProbe> => {
+      return await (window as any).__LIFECYCLE_HARNESS__.runDestroyCleanupProbe()
+    })
+
+    expect(probe.keyHandlerReleased).toBeTruthy()
+    expect(probe.visibilityHandlerReleased).toBeTruthy()
+    expect(probe.pointerActivityHandlerReleased).toBeTruthy()
+    expect(probe.contextLostHandlerReleased).toBeTruthy()
+    expect(probe.contextRestoredHandlerReleased).toBeTruthy()
+    expect(probe.colorSchemeListenerReleased).toBeTruthy()
+    expect(probe.resizeObserverReleased).toBeTruthy()
+    expect(probe.resizeRafCleared).toBeTruthy()
+    expect(probe.previewTimerCancelled).toBeTruthy()
+    expect(probe.idleTimerCleared).toBeTruthy()
+    expect(probe.linkPreviewReleased).toBeTruthy()
+    expect(probe.appReleased).toBeTruthy()
+    expect(probe.viewportReleased).toBeTruthy()
+    expect(probe.canvasReleased).toBeTruthy()
+    expect(probe.canvasOwnershipReleased).toBeTruthy()
     expect(pageErrors).toEqual([])
   })
 

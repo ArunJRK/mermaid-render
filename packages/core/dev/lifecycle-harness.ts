@@ -16,6 +16,24 @@ type LifecycleMisuseResult = {
   mountAfterDestroyError: string | null
 }
 
+type DestroyCleanupResult = {
+  keyHandlerReleased: boolean
+  visibilityHandlerReleased: boolean
+  pointerActivityHandlerReleased: boolean
+  contextLostHandlerReleased: boolean
+  contextRestoredHandlerReleased: boolean
+  colorSchemeListenerReleased: boolean
+  resizeObserverReleased: boolean
+  resizeRafCleared: boolean
+  previewTimerCancelled: boolean
+  idleTimerCleared: boolean
+  linkPreviewReleased: boolean
+  appReleased: boolean
+  viewportReleased: boolean
+  canvasReleased: boolean
+  canvasOwnershipReleased: boolean
+}
+
 type ContextRecoveryResult = {
   initialNodeCount: number
   recoveredNodeCount: number
@@ -74,6 +92,7 @@ declare global {
     __LIFECYCLE_HARNESS__?: {
       runMultiInstanceProbe(): Promise<LifecycleHarnessResult>
       runLifecycleMisuseProbe(): Promise<LifecycleMisuseResult>
+      runDestroyCleanupProbe(): Promise<DestroyCleanupResult>
       runContextRecovery(): Promise<ContextRecoveryResult>
       runContextRecoveryVisualProbe(): Promise<ContextRecoveryVisualResult>
       runVisibilityPauseProbe(): Promise<VisibilityPauseResult>
@@ -227,6 +246,134 @@ window.__LIFECYCLE_HARNESS__ = {
       loadAfterDestroyError,
       setPhilosophyAfterDestroyError,
       mountAfterDestroyError,
+    }
+
+    setStatus(JSON.stringify(result, null, 2))
+    return result
+  },
+  async runDestroyCleanupProbe(): Promise<DestroyCleanupResult> {
+    const originalGpuDescriptor = Object.getOwnPropertyDescriptor(navigator, 'gpu')
+    try {
+      Object.defineProperty(navigator, 'gpu', {
+        configurable: true,
+        value: undefined,
+      })
+    } catch {
+      // ignore if the browser does not let us override this property
+    }
+
+    const probeWrapper = document.createElement('div')
+    probeWrapper.style.position = 'fixed'
+    probeWrapper.style.left = '-9999px'
+    probeWrapper.style.top = '0'
+    probeWrapper.style.width = '320px'
+    probeWrapper.style.height = '180px'
+    const probeCanvas = document.createElement('canvas')
+    probeCanvas.width = 320
+    probeCanvas.height = 180
+    probeCanvas.style.width = '320px'
+    probeCanvas.style.height = '180px'
+    probeWrapper.appendChild(probeCanvas)
+    document.body.appendChild(probeWrapper)
+
+    const source = `graph TD
+      A[Start] --> B[Done]`
+
+    let previewResolved = false
+    let keyHandlerReleased = false
+    let visibilityHandlerReleased = false
+    let pointerActivityHandlerReleased = false
+    let contextLostHandlerReleased = false
+    let contextRestoredHandlerReleased = false
+    let colorSchemeListenerReleased = false
+    let resizeObserverReleased = false
+    let resizeRafCleared = false
+    let idleTimerCleared = false
+    let linkPreviewReleased = false
+    let appReleased = false
+    let viewportReleased = false
+    let canvasReleased = false
+    let canvasOwnershipReleased = false
+    const steps: string[] = []
+    const mark = (step: string) => {
+      steps.push(step)
+      setStatus(JSON.stringify({ steps }, null, 2))
+    }
+
+    const renderer = new MermaidRenderer()
+    try {
+      mark('mount:primary:start')
+      await withTimeout(renderer.mount(probeCanvas), 'cleanup mount')
+      mark('mount:primary:done')
+      mark('load:primary:start')
+      await withTimeout(renderer.load(source), 'cleanup load')
+      mark('load:primary:done')
+
+      const preview = (renderer as any)._linkPreview
+      mark('preview:schedule')
+      preview.scheduleShow(
+        () => ({ x: 32, y: 32 }),
+        'linked-file.mmd',
+        async () => {
+          previewResolved = true
+          return null
+        },
+      )
+
+      mark('destroy:primary:start')
+      renderer.destroy()
+      mark('destroy:primary:done')
+      mark('preview:wait:start')
+      await new Promise(resolve => window.setTimeout(resolve, 350))
+      mark('preview:wait:done')
+
+      keyHandlerReleased = (renderer as any)._keyHandler === null
+      visibilityHandlerReleased = (renderer as any)._visibilityHandler === null
+      pointerActivityHandlerReleased = (renderer as any)._pointerActivityHandler === null
+      contextLostHandlerReleased = (renderer as any)._webglContextLostHandler === null
+      contextRestoredHandlerReleased = (renderer as any)._webglContextRestoredHandler === null
+      colorSchemeListenerReleased = (renderer as any)._colorSchemeMediaQuery === null
+        && (renderer as any)._colorSchemeChangeHandler === null
+      resizeObserverReleased = (renderer as any)._resizeObserver === null
+      resizeRafCleared = (renderer as any)._resizeRafId === null
+      idleTimerCleared = (renderer as any)._idleTickerTimeoutId === null
+      linkPreviewReleased = (renderer as any)._linkPreview === null
+      appReleased = (renderer as any)._app === null
+      viewportReleased = (renderer as any)._viewport === null
+      canvasReleased = (renderer as any)._canvas === null
+      canvasOwnershipReleased = !(MermaidRenderer as any)._liveCanvases.has(probeCanvas)
+
+      mark('probe:complete')
+    } catch (error) {
+      setStatus(JSON.stringify({
+        steps,
+        error: error instanceof Error ? error.message : String(error),
+      }, null, 2))
+      throw error
+    } finally {
+      renderer.destroy()
+      probeWrapper.remove()
+      if (originalGpuDescriptor) {
+        Object.defineProperty(navigator, 'gpu', originalGpuDescriptor)
+      }
+    }
+
+    const result = {
+      keyHandlerReleased,
+      visibilityHandlerReleased,
+      pointerActivityHandlerReleased,
+      contextLostHandlerReleased,
+      contextRestoredHandlerReleased,
+      colorSchemeListenerReleased,
+      resizeObserverReleased,
+      resizeRafCleared,
+      previewTimerCancelled: !previewResolved,
+      idleTimerCleared,
+      linkPreviewReleased,
+      appReleased,
+      viewportReleased,
+      canvasReleased,
+      canvasOwnershipReleased,
     }
 
     setStatus(JSON.stringify(result, null, 2))
