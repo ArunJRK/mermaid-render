@@ -598,7 +598,7 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
 
 - `docs/tech.md`
   - Replaced generic performance expectations with measured browser-harness numbers.
-  - Clarified that the `~330KB` budget applies to the publishable core library, while the current demo app entry chunk is much larger and still needs a deliberate chunking or acceptance decision.
+  - Clarified that the `~330KB` budget applies to the publishable core library, while the static demo now has its own separately enforced release budget.
   - Corrected the parser section to match the real runtime path: Mermaid is lazily imported through the adapter, not through `@mermaid-js/parser`.
   - Added explicit routing guarantee notes: only Blueprint is collision-aware, Blueprint routing now uses rendered node footprints, emits a direct fallback route on no-path, and processes edges deterministically.
   - Added an explicit Blueprint routing ceiling note tied to the current verified stress floor, instead of leaving the occupancy-grid cost model implicit.
