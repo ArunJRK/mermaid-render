@@ -768,7 +768,12 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
      - `pnpm --filter @mermaid-render/core typecheck`
      - `pnpm --filter @mermaid-render/core exec playwright test -g "keeps the stage free of orphaned or duplicate sprites across fold, focus, and philosophy rebuilds"` → passed
      - `git diff --check`
-   - this materially improves item 30, but does not yet fully prove the whole item because the “spring easing without jumps/flicker/double-drawn nodes” part still needs broader animated visual evidence than inventory/count checks alone.
+  - this was an intermediate checkpoint only. The later relayout browser slice now also covers:
+    - smooth multi-frame node progression instead of teleporting
+    - clean mid-relayout rendered frames without double-drawn node artifacts
+    - settled cleanup after rapid relayout interruptions
+    - preserved fold state across philosophy switches
+    - active relayout pause/resume on `visibilitychange`
 
 26. `goal.md` item 30 now also has mid-animation inventory proof for the live relayout path:
    - `packages/core/tests/browser/render.spec.ts`
@@ -1417,7 +1422,10 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
    - latest measured perf after this pass:
      - representative: `loadMs ≈ 82.9`, `avgFrameMs ≈ 10.65`, `approxFps ≈ 93.94`
      - stress: `loadMs ≈ 249.7`, `avgFrameMs ≈ 9.66`, `approxFps ≈ 103.48`
-   - this improves item 47 directly, but item 50 remains open because viewport and layout transitions still run private `requestAnimationFrame` loops instead of one coordinated animation clock
+  - this was an intermediate checkpoint only. The current renderer path no longer relies on private animation clocks for live motion:
+    - `Viewport` resolves motion through Pixi `Ticker.shared`
+    - `animation-clock.test.ts` guards renderer animation paths against reintroducing `requestAnimationFrame`, except for the explicit resize debounce
+    - `test:animation` now proves the active relayout/runtime slice end to end, including `visibilitychange` pause/resume
 
 12. `goal.md` item 49 now has direct unit coverage and an explicit cleanup fix in `layout-animator.ts`:
    - `LayoutAnimator.cancel()` no longer just drops bookkeeping arrays
