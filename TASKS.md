@@ -12,13 +12,20 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
 - The current full release gate is green on this tree:
   - `pnpm verify:core`
   - lint, typecheck, unit tests, browser tests, core build, demo build, bundle check, and `npm pack --dry-run` all passed together
-- External GitHub Actions evidence now exists for the current tree too:
-  - workflow: `Core Verify`
-  - run: `26679761812`
-  - commit: `cb00a8f`
-  - trigger: push to `main`
-  - result: `success`
-  - nuance: this is the real `.github/workflows/core.yml` gate on the current tree, but it is a `push` run, not a fresh `pull_request` run, so item `12`'s exact "CI green on PR" wording still lacks one last same-workflow PR-shaped proof artifact
+- External GitHub Actions evidence now exists in both shapes item `12` asked for:
+  - pull request:
+    - workflow: `Core Verify`
+    - run: `26679935715`
+    - commit: `7c07ee4`
+    - trigger: `pull_request`
+    - result: `success`
+    - PR: `#1` (`docs: note pull request audit artifact`)
+  - post-merge mainline:
+    - workflow: `Core Verify`
+    - run: `26680191944`
+    - commit: `4224af1`
+    - trigger: push to `main`
+    - result: `success`
 - Current verified results from that gate:
   - unit suite: `142` passed
   - browser suite: `83` passed
@@ -1011,14 +1018,23 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
    - deeper vendor splitting is still optional optimization work, but the v1 budget state is now explicit and enforced
 4. `goal.md` item 12 is now covered on the current tree by direct gate evidence:
    - `.github/workflows/core.yml` runs the same root `pnpm verify:core` gate used locally
+   - the current tree now has both artifacts the goal text asked for:
+     - a real green `pull_request` run:
+       - run `26679935715`
+       - commit `7c07ee4`
+       - result `success`
+     - a real green post-merge `push` run on `main`:
+       - run `26680191944`
+       - commit `4224af1`
+       - result `success`
    - the current tree passes lint, typecheck, unit tests, headless browser render tests, core build, static demo build, bundle-budget checks, and `npm pack --dry-run`
-   - latest verified gate on this exact tree:
-     - unit tests: `140` passed
-     - browser tests: `53` passed
-     - core ESM: `201.43 KiB` (`206261 bytes`)
-     - core CJS: `203.71 KiB` (`208604 bytes`)
-     - demo entry: `index-CUjO_MnI.js` `474.64 KiB` raw (`486032 bytes`), `136.52 KiB` gzip (`139792 bytes`)
-     - dry-run tarball: `mermaid-render-core-0.1.0.tgz`, package size `272.9 kB`, total files `7`
+   - latest verified gate counts and artifact surface on the current v1 tree:
+     - unit tests: `142` passed
+     - browser tests: `83` passed
+     - core ESM: `202.86 KiB` (`207724 bytes`)
+     - core CJS: `205.14 KiB` (`210067 bytes`)
+     - demo entry: `index-C8tk_jFF.js` `478.38 KiB` raw (`489864 bytes`), `137.53 KiB` gzip (`140829 bytes`)
+     - dry-run tarball: `mermaid-render-core-1.0.0.tgz`, package size `275.8 kB`, total files `7`
    - `docs/release.md` documents both the npm publish path and the static demo deploy path
 
 4a. `goal.md` items 41, 42, 43, and 46 now have direct browser/runtime proof on the current tree:

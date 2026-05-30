@@ -41,13 +41,18 @@ GitHub Actions PR / mainline gate:
 - workflow: `.github/workflows/core.yml`
 - triggers: pull requests and pushes that touch the core/docs/example/release surface
 - command executed in CI: `pnpm verify:core`
-- latest externally verified green run:
+- latest externally verified green `pull_request` run:
   - workflow: `Core Verify`
-  - run: `26679761812`
-  - commit: `cb00a8f`
+  - run: `26679935715`
+  - commit: `7c07ee4`
+  - trigger: `pull_request`
+  - result: `success`
+- latest externally verified green post-merge `push` run:
+  - workflow: `Core Verify`
+  - run: `26680191944`
+  - commit: `4224af1`
   - trigger: push to `main`
   - result: `success`
-- nuance: this proves the real CI workflow and command are green on the current tree, but it is not yet a fresh `pull_request`-triggered run on the same SHA, so `goal.md` item `12` still has a small PR-shaped evidence gap
 - release-audit closeout should keep both artifacts when possible:
   - one green `pull_request` run on the candidate branch
   - one green post-merge `push` run on `main`
