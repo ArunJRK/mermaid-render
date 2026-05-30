@@ -36,6 +36,12 @@ Latest verified current-tree result:
 - demo entry: `478.38 KiB` raw / `137.53 KiB` gzip
 - dry-run tarball: `mermaid-render-core-1.0.0.tgz`, package size `275.8 kB`
 
+GitHub Actions PR / mainline gate:
+
+- workflow: `.github/workflows/core.yml`
+- triggers: pull requests and pushes that touch the core/docs/example/release surface
+- command executed in CI: `pnpm verify:core`
+
 ## Dry-Run the npm Package
 
 From the repo root:
@@ -305,6 +311,31 @@ Current result on the present tree:
 - latest focused run measurements:
   - representative: `7` nodes / `6` edges, `loadMs ≈ 97.6`, `avgFrameMs ≈ 11.41`, `p95FrameMs ≈ 8.5`, `approxFps ≈ 87.62`
   - stress: `220` nodes / `294` edges, `loadMs ≈ 297.2`, `avgFrameMs ≈ 9.87`, `p95FrameMs ≈ 25.0`, `approxFps ≈ 101.27`
+
+There is also a focused ship-surface gate for release artifacts:
+
+```bash
+pnpm --filter @mermaid-render/core test:ship
+```
+
+That command covers:
+
+- fresh core library build
+- fresh static demo build
+- built static demo smoke from a plain static host
+- bundle-budget enforcement
+- publish-surface `npm pack --dry-run` verification
+
+Current result on the present tree:
+
+- built static demo smoke: `1` passed
+- bundle budget check: passed
+- `npm pack --dry-run`: passed
+- latest focused run artifact measurements:
+  - core ESM: `201.94 KiB`
+  - core CJS: `204.23 KiB`
+  - demo entry: `478.38 KiB` raw / `137.53 KiB` gzip
+  - dry-run tarball: `mermaid-render-core-1.0.0.tgz`, package size `277.8 kB`
 
 Current environment expectation:
 

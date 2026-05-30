@@ -122,6 +122,24 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
     - current stress-mode detail suppression
     - current stress-mode preview suppression
     - stress-mode relayout fast path
+- The release artifact and ship-surface checks now also have a first-class rerun path:
+  - `pnpm --filter @mermaid-render/core test:ship`
+  - current result:
+    - built static demo smoke: `1` passed
+    - bundle budget check: passed
+    - `npm pack --dry-run`: passed
+  - latest focused run artifact measurements:
+    - core ESM: `201.94 KiB` (`206788 bytes`)
+    - core CJS: `204.23 KiB` (`209128 bytes`)
+    - demo entry: `index-C8tk_jFF.js` `478.38 KiB` raw (`489864 bytes`) / `137.53 KiB` gzip (`140829 bytes`)
+    - dry-run tarball: `mermaid-render-core-1.0.0.tgz`, package size `277.8 kB`
+  - this gives `goal.md` items `11` and the artifact/publish half of `12` one concrete verification command for:
+    - fresh library build
+    - fresh static demo build
+    - built static demo smoke from a plain file host
+    - bundle-budget enforcement
+    - publish-surface pack verification
+  - `.github/workflows/core.yml` still runs the broader root `pnpm verify:core` gate on pull requests and pushes to `main`, so PR CI remains tied to the same release surface rather than a separate unpublished checklist
     - that remained true under:
       - default launch
       - `--enable-unsafe-webgpu --ignore-gpu-blocklist`
