@@ -561,6 +561,8 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
    - `packages/core/tests/browser/render.spec.ts`
      - added browser proof:
        - `keeps edge endpoints attached to moving nodes during live relayout animation`
+     - that live relayout attachment case now also keeps a clipped motion artifact around the moving edge and its endpoint nodes:
+       - `packages/core/tests/browser/render.spec.ts-snapshots/relayout-moving-edge-attached-chromium-darwin.png`
    - verified with:
      - `pnpm --filter @mermaid-render/core typecheck`
      - `pnpm --filter @mermaid-render/core test` → `143` passed

@@ -1502,6 +1502,35 @@ graph TD
       expect(pointOnNodeRectBoundary(edge.points[edge.points.length - 1], targetNode!.center, targetNode!.displayWidth, targetNode!.displayHeight, 12)).toBe(true)
     }
 
+    const sourceBounds = await page.evaluate((nodeId) => window.__MERMAID_DEV__!.getNodeScreenBounds(nodeId), movedEdge!.source)
+    const targetBounds = await page.evaluate((nodeId) => window.__MERMAID_DEV__!.getNodeScreenBounds(nodeId), movedEdge!.target)
+    expect(sourceBounds).not.toBeNull()
+    expect(targetBounds).not.toBeNull()
+
+    const xs = [
+      sourceBounds!.x,
+      sourceBounds!.x + sourceBounds!.width,
+      targetBounds!.x,
+      targetBounds!.x + targetBounds!.width,
+      ...movedEdge!.screenPoints.map((point) => point.x),
+    ]
+    const ys = [
+      sourceBounds!.y,
+      sourceBounds!.y + sourceBounds!.height,
+      targetBounds!.y,
+      targetBounds!.y + targetBounds!.height,
+      ...movedEdge!.screenPoints.map((point) => point.y),
+    ]
+    const attachedMotionShot = await page.screenshot({
+      clip: {
+        x: Math.max(0, Math.floor(Math.min(...xs) - 24)),
+        y: Math.max(0, Math.floor(Math.min(...ys) - 24)),
+        width: Math.ceil(Math.max(...xs) - Math.min(...xs) + 48),
+        height: Math.ceil(Math.max(...ys) - Math.min(...ys) + 48),
+      },
+    })
+    expect(attachedMotionShot).toMatchSnapshot('relayout-moving-edge-attached.png')
+
     expect(pageErrors).toEqual([])
   })
 
