@@ -176,6 +176,10 @@ That focused run covers:
 - hidden-tab pause / visible-tab resume during active relayout
 - stress-mode relayout fast path
 
+Current result on the present tree:
+
+- `pnpm --filter @mermaid-render/core test:browser:relayout` -> `9` passed
+
 Current environment expectation:
 
 - in ordinary CI or headless Chromium without a usable WebGPU adapter, the WebGPU probe should finish quickly with an explicit adapter-unavailable result instead of hanging

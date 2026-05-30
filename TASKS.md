@@ -70,6 +70,9 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
     - node motion progresses smoothly instead of teleporting
     - relayout motion pauses while hidden and resumes when visible
     - stress mode skips relayout fade/motion work
+  - while landing that focused gate, the moving-edge motion artifact was also stabilized:
+    - `relayout-moving-edge-attached-chromium-darwin.png` now uses a fixed-size centered crop instead of geometry-derived image dimensions
+    - that removed a real clustered-run flake where tiny motion differences changed the snapshot width by a few pixels
     - that remained true under:
       - default launch
       - `--enable-unsafe-webgpu --ignore-gpu-blocklist`
