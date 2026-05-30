@@ -85,6 +85,12 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
     - theme unit slice: `7` passed
     - theme/emphasis browser slice: `10` passed
   - this gives `goal.md` items `55` through `64` one concrete verification command instead of scattering the proof across several unit files and many browser `-g` runs
+- The cross-file linking and hover-preview slice now also has a first-class rerun path:
+  - `pnpm --filter @mermaid-render/core test:linking`
+  - current result:
+    - parser/resolver unit slice: `20` passed
+    - linking/preview browser slice: `16` passed
+  - this gives `goal.md` items `33` through `40` one concrete verification command instead of scattering the proof across parser unit tests and many browser `-g` runs
     - that remained true under:
       - default launch
       - `--enable-unsafe-webgpu --ignore-gpu-blocklist`

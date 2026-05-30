@@ -217,6 +217,29 @@ Current result on the present tree:
 - theme unit slice: `7` passed
 - theme/emphasis browser slice: `10` passed
 
+There is also a focused mixed unit + browser gate for the cross-file linking and preview contract:
+
+```bash
+pnpm --filter @mermaid-render/core test:linking
+```
+
+That command covers:
+
+- `@link` directive parsing and malformed-directive warnings
+- graph-builder link attachment and broken-target validation
+- path normalization and trust-boundary rejection
+- real cross-file navigation and fragment reveal
+- last-write-wins async load behavior
+- hover preview placement, stability, race-safety, and target-philosophy rendering
+- preview cache bounding and invalidation
+- broken-link, malformed-link, and out-of-scope warning states
+- stress-mode preview suppression
+
+Current result on the present tree:
+
+- parser/resolver unit slice: `20` passed
+- linking/preview browser slice: `16` passed
+
 Current environment expectation:
 
 - in ordinary CI or headless Chromium without a usable WebGPU adapter, the WebGPU probe should finish quickly with an explicit adapter-unavailable result instead of hanging
