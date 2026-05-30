@@ -618,6 +618,13 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
      - `pnpm --filter @mermaid-render/core test:browser` → `52` passed
      - `git diff --check` → passed
 
+24. `goal.md` item 50 now also has a source-level regression guard:
+   - added `packages/core/src/renderer/__tests__/animation-clock.test.ts`
+   - it recursively scans `src/renderer/**` and fails if `requestAnimationFrame` or `cancelAnimationFrame` reappears in renderer animation paths
+   - the only allowed remaining use is the resize debounce tied to `_resizeRafId` in `mermaid-renderer.ts`, which is not an animation clock
+   - verified with:
+     - `pnpm --filter @mermaid-render/core test -- --run src/renderer/__tests__/animation-clock.test.ts`
+
 24. `goal.md` item 36 now has direct browser/runtime proof in addition to docs and unit coverage:
    - existing implementation already enforced the trust boundary:
      - `normalizeDiagramPath(...)` rejects URL targets and out-of-scope traversal
