@@ -176,7 +176,7 @@ Current measured outputs:
   - `dist/index.js`: ~`202.28 KiB`
   - `dist/index.cjs`: ~`204.57 KiB`
 - Demo web app entry chunk:
-  - latest `packages/core/dist-demo/assets/index-*.js`: ~`478.06 KiB` minified / `137.36 KiB` gzip
+  - latest `packages/core/dist-demo/assets/index-*.js`: ~`477.90 KiB` minified / `137.33 KiB` gzip
 
 The bundled example `.mmd` files are now lazy-loaded as separate static chunks instead of being inlined into the initial demo entry bundle. That reduced the entry chunk slightly and, more importantly, removed example corpus size from the first-load cost. The remaining large first chunk is now mostly renderer/runtime code rather than raw example content.
 
@@ -193,7 +193,7 @@ pnpm verify:core
 Latest verified current-tree result:
 
 - unit tests: `140` passed
-- browser tests: `74` passed
+- browser tests: `78` passed
 - built static demo smoke test: passed
 - lint, typecheck, core build, demo build, bundle-budget check, and `npm pack --dry-run`: passed
 

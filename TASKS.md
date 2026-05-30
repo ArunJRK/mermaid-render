@@ -72,6 +72,44 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
   - `readme-overview-narrative-chromium-darwin.png`
   - `readme-blueprint-simple-flow-chromium-darwin.png`
   - `readme-mobile-responsive-chromium-darwin.png`
+- `goal.md` item 45 is now stated plainly in the public README, not only in technical notes and tests:
+  - the browser-verified interactive floor is called out as roughly `220` nodes / `294` edges
+  - rendering past that floor is described as best-effort, not guaranteed 60fps
+  - `PERF_STRESS_THRESHOLD` and the current stress-mode degradations are spelled out for embedders
+- The README now also states the active backend contract directly for embedders:
+  - WebGPU is preferred when a usable adapter exists
+  - WebGL fallback is the normal path when `navigator.gpu` exists but no adapter is available
+  - there is no claimed Canvas 2D fallback; the no-usable-GPU path is a readable unavailable state instead
+- The README now also states the embed lifecycle/runtime contract directly for embedders:
+  - same-canvas remount is allowed, different-canvas remount is rejected
+  - foreign canvas ownership is rejected instead of leaking a second renderer
+  - post-`destroy()` calls fail with clear errors
+  - separate canvases can host multiple live renderer instances
+  - hidden-tab and idle states pause/stop ticker work instead of leaving a permanent render loop
+- The README now also states the tested theme/emphasis contract directly for embedders:
+  - shipped palettes keep a tested contrast floor for node, edge-label, and subgraph-label text
+  - all philosophies define depth tints for nested subgraphs
+  - broken-link state is not color-only
+  - hover and selection remain distinct, coexisting states
+  - focus dimming keeps context visible instead of treating it as hidden
+- The README now also states the interaction contract directly for embedders:
+  - `activateLink(nodeId)` is the same path as a real linked-node click
+  - `#nodeId` fragments reveal/select the target node after navigation
+  - broken targets surface a visible broken-link state and readable warning
+  - selection clears across graph rebuilds instead of sticking to stale node ids
+- The README now also states two live-switch guarantees directly for embedders:
+  - fold state survives `setPhilosophy(...)` relayouts
+  - philosophy switches recolor the live scene, including Blueprint font treatment across node, edge, subgraph, and preview text
+- `docs/release.md` now carries the current verified gate result directly instead of only command recipes:
+  - unit tests `140` passed
+  - browser tests `78` passed
+  - built static demo smoke passed
+  - current bundle sizes and dry-run tarball size are listed in the release doc itself
+- The philosophy leaf docs are now aligned with the current v1 runtime instead of only the top-level philosophy index:
+  - `map`, `breath`, `radial`, and `mosaic` now explicitly describe their shipped behavior as Dagre + theme/spacing presets, with richer layout/routing ideas called out as future intent
+  - `blueprint` now describes the actual occupancy-grid + A* routed path, rendered-footprint reservation, deterministic ordering, and visible fallback-wire behavior
+  - `narrative` now documents its subgraph-heavy Dagre fallback and explicitly states that it is a best-effort readability path rather than a collision-free router
+  - the detailed algorithm/routing bullet lists in the experimental philosophy docs now sit under explicit future-intent framing instead of reading like already-shipped custom engines
 - `goal.md` item 15 now also has a committed browser snapshot artifact:
   - `nonrectangular-label-fit-chromium-darwin.png`
 - `goal.md` item 6 now also has a committed browser snapshot artifact:
@@ -1300,6 +1338,13 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
      - core CJS: `203.65 KiB` (`208541 bytes`)
      - demo entry: `index-CNnJ3N89.js` `489.53 KiB` raw (`489536 bytes`) / `137.36 KiB` gzip (`140657 bytes`)
      - dry-run tarball: `mermaid-render-core-1.0.0.tgz`, package size `274.4 kB`
+
+23. Flowchart-only runtime scope is now enforced explicitly instead of relying on docs alone:
+   - `packages/core/src/parser/graph-builder.ts` now rejects non-flowchart Mermaid families with `UNSUPPORTED_DIAGRAM_TYPE`
+   - when Mermaid falls back to adapter type `unknown`, the graph builder now recovers the declared diagram family from the source header so the user-facing error names the actual family, e.g. `classDiagram`
+   - added unit proof in `packages/core/src/parser/__tests__/graph-builder.test.ts`
+   - added browser proof plus committed fallback snapshot:
+     - `unsupported-diagram-type-error-state-chromium-darwin.png`
 
 ## Resume Notes
 

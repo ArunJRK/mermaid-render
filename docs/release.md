@@ -26,6 +26,16 @@ That gate runs:
 - core bundle-budget check and demo-entry size report
 - npm package dry-run pack verification
 
+Latest verified current-tree result:
+
+- unit tests: `140` passed
+- browser tests: `78` passed
+- built static demo smoke test: passed
+- core ESM: `202.28 KiB`
+- core CJS: `204.57 KiB`
+- demo entry: `477.90 KiB` raw / `137.33 KiB` gzip
+- dry-run tarball: `mermaid-render-core-1.0.0.tgz`, package size `274.4 kB`
+
 ## Dry-Run the npm Package
 
 From the repo root:

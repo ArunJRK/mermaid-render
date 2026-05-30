@@ -3186,6 +3186,35 @@ graph TD
     expect(pageErrors).toEqual([])
   })
 
+  test('shows a readable canvas and UI error state for unsupported Mermaid diagram families', async ({ page }) => {
+    const pageErrors = await attachPageErrorTracking(page)
+    await waitForDevApi(page)
+
+    const success = await page.evaluate(async () => {
+      return await window.__MERMAID_DEV__!.loadSource(`classDiagram
+        Animal <|-- Dog
+        class Animal
+        class Dog
+      `, '/__unsupported-class-diagram__.mmd')
+    })
+
+    expect(success).toBeFalsy()
+    await expect.poll(async () => (await snapshot(page)).statusLevel).toBe('error')
+
+    const overlay = await page.evaluate(() => window.__MERMAID_DEV__!.getOverlayState() as OverlayState)
+    expect(overlay.visible).toBeTruthy()
+    expect(overlay.text).toContain('Unsupported Mermaid diagram type')
+    expect(overlay.text).toContain('flowchart only')
+
+    const state = await snapshot(page)
+    expect(state.statusMessage).toContain('Unsupported Mermaid diagram type')
+
+    const canvas = page.locator('#canvas')
+    await expect(canvas).toHaveScreenshot('unsupported-diagram-type-error-state.png')
+
+    expect(pageErrors).toEqual([])
+  })
+
   test('handles degenerate graphs without crashes or NaN render state', async ({ page }) => {
     const pageErrors = await attachPageErrorTracking(page)
     await waitForDevApi(page)

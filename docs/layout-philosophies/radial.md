@@ -6,7 +6,7 @@
 
 The diagram has a central concept. Everything else orbits around it in concentric rings. First-level connections form the inner ring, second-level the outer ring. Your eye starts at the center and explores outward.
 
-Think: dependency trees, topic exploration, API surface maps, knowledge graphs.
+Today, think: diagrams where you want a radial visual flavor on top of `flowchart` syntax, with the understanding that the current runtime still uses the shared Dagre path rather than a dedicated radial engine.
 
 ## Gestalt Principles
 
@@ -21,6 +21,10 @@ Branches distribute evenly around the center. Balance creates calm.
 
 ## Layout Algorithm
 
+Current v1 shipped behavior: Dagre layout with the Radial theme/spacing preset. There is no dedicated ring-based radial layout engine in the current runtime.
+
+Future dedicated-engine intent, not current runtime behavior:
+
 - Radial tree layout from the most-connected node (or explicitly marked root)
 - First-level connections in a ring at radius R1
 - Second-level at radius R2 (R2 = R1 * 1.8)
@@ -28,6 +32,10 @@ Branches distribute evenly around the center. Balance creates calm.
 - Uses d3-hierarchy or custom radial positioning
 
 ## Edge Routing
+
+Current v1 shipped behavior: straight/Dagre-style edges rendered with the Radial theme. The engine does not currently route everything along curved radial arcs.
+
+Future routing intent:
 
 - Curved arcs radiating outward from center
 - No straight lines — everything follows the radial flow

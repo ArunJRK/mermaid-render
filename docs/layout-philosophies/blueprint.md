@@ -34,7 +34,14 @@ Dagre with grid snapping. Nodes align to 20px grid positions after dagre layout.
 
 ## Edge Routing
 
-Straight lines with diagonal allowed. Physics-based collision detection — if line would pass through a node, route around with small offset.
+Current v1 shipped behavior: occupancy-grid-backed orthogonal routing on top of the Blueprint layout pass.
+
+Today this means:
+
+- node occupancy is based on the rendered node footprint, including long-label expansion
+- the router uses a grid + A* search for collision-aware orthogonal paths
+- routing order is deterministic rather than source-order dependent
+- when no clear orthogonal path exists, the renderer still draws a visible fallback wire and surfaces congestion instead of dropping the edge silently
 
 - **Port-based attachment.** Edges attach to specific ports on node borders (top, bottom, left, right), not to the nearest point. This creates predictable, clean connections.
 - **Edge labels centered on segments.** Relationship labels (1..*, belongs_to, extends) sit on the horizontal or vertical segment of the edge, never at an angle.

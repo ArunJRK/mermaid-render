@@ -46,6 +46,13 @@ Routing guarantees are philosophy-specific:
 - `narrative` trims edges to node boundaries and applies limited straight-line avoidance, but it does not guarantee obstacle-free routing
 - `map`, `breath`, `radial`, and `mosaic` are visual presets on Dagre and should not be treated as collision-free routers
 
+Performance and degradation are also explicit:
+
+- The renderer is browser-verified for interactive use through at least roughly `220` nodes / `294` edges.
+- Past that floor, rendering is best-effort rather than a hard 60fps guarantee.
+- When a diagram exceeds the verified floor, `load()` emits `PERF_STRESS_THRESHOLD` and the renderer switches into a stress mode instead of degrading silently.
+- Stress mode currently suppresses cross-file hover previews, hides edge labels, and hides subgraph chevrons/count badges so large graphs stay usable while authors lean on folding, focus navigation, or cross-file splits.
+
 ## Embed
 
 ```ts
@@ -106,12 +113,39 @@ Public surface for v1:
 - `on()`, `off()`
 - `destroy()`
 
+Lifecycle behavior:
+
+- `mount(canvas)` is safe to call again on the same live instance and same canvas, but it throws if you try to remount that instance onto a different canvas.
+- A canvas already owned by another live `MermaidRenderer` instance is rejected with a clear error instead of leaking a second Pixi app/context.
+- After `destroy()`, the instance is finished: later `load()`, `setPhilosophy()`, or `mount()` calls throw clear errors instead of silently no-oping on a dead renderer.
+- Multiple renderer instances can coexist on the same page as long as each owns its own canvas.
+
 Theme behavior:
 
 - Default `themeMode` is `system`.
 - In system-light environments, the default `narrative` palette resolves to a built-in light variant.
 - The other shipped philosophies keep their current dark palettes unless the embedder supplies `themeOverrides`.
 - `themeOverrides` are applied on top of the resolved palette, so embedders can supply a host-matched light palette without forking the renderer.
+
+Visual/theme guarantees:
+
+- The shipped palettes enforce a tested contrast floor for node labels, edge labels, and subgraph labels against their actual backing colors.
+- All shipped philosophies define nested subgraph depth tints; deep nesting is not a flat single-fill fallback.
+- Broken-link state is not color-only: the renderer keeps a distinct badge cue in addition to the themed broken-link color treatment.
+- Hover and selection are distinct states, and the same node can show both at once instead of collapsing into one shared glow.
+- Focus dimming keeps unrelated context visible as context rather than treating dimmed nodes as effectively hidden.
+
+Backend behavior:
+
+- The renderer prefers WebGPU when a usable adapter is available and falls back to WebGL when it is not.
+- The active backend is exposed through the browser/demo harness and covered by the release gate.
+- If a browser exposes `navigator.gpu` but `requestAdapter()` returns `null`, the renderer still mounts and renders through WebGL.
+- There is no built-in Canvas 2D fallback in the current PixiJS v8 path. If no usable GPU backend exists, v1 surfaces a readable "rendering unavailable" state instead of white-screening or claiming a fallback that is not there.
+
+Runtime behavior:
+
+- When the tab is backgrounded, active ticker-driven animation pauses and resumes on visibility restore.
+- When no animation is in flight, the renderer lets the Pixi ticker go idle instead of burning a permanent render loop.
 
 ## Cross-File Linking
 
@@ -131,6 +165,19 @@ Resolver contract for browser embeds:
 - `linkResolver.canonicalize(targetFile, fromFile)` must turn author-provided paths into one canonical `.mmd` key or return `null` for out-of-scope targets.
 - `linkResolver.read(canonicalFile)` must return Mermaid source from an allowlisted or virtual file map. Core never fetches a raw author-supplied URL.
 - Relative paths resolve from the current file, absolute paths stay rooted, extensionless targets gain `.mmd`, and `.` / `..` segments are normalized.
+
+Interaction contract:
+
+- `activateLink(nodeId)` uses the same navigation path as clicking a linked node in the demo/runtime.
+- A link target with `#nodeId` reveals and selects that target node after the destination file loads; a link without a fragment lands on the destination file's normal fit view.
+- Broken targets are visible and actionable: unresolved files or fragments render a broken-link badge state and surface a readable warning instead of becoming a dead silent click.
+- Selection is intentionally not sticky across graph rebuilds. Fold/unfold, focus changes, file loads, and philosophy relayouts clear selection rather than carrying a stale node id onto a rebuilt scene.
+- Fold state is preserved across `setPhilosophy(...)` relayouts rather than being reset on every philosophy switch.
+
+Philosophy/theme switch behavior:
+
+- `setPhilosophy(...)` recolors the live scene instead of only affecting future renders: node fills/strokes/labels, edge strokes/labels, subgraph labels/accents, and broken-link badge accents switch together.
+- Blueprint font treatment is applied across the whole live scene on switch, including node labels, edge labels, subgraph labels, and hover-preview title text.
 
 For virtual in-memory projects, use the exported helper:
 

@@ -21,6 +21,10 @@ All cards are the same size and shape. No visual hierarchy among individual item
 
 ## Layout Algorithm
 
+Current v1 shipped behavior: Dagre layout with the Mosaic theme/spacing preset. There is no dedicated masonry/card-grid engine in the current runtime.
+
+Future dedicated-engine intent, not current runtime behavior:
+
 - Masonry/card grid layout
 - Each node renders as a large card (300x100)
 - Cards arranged in responsive columns (auto-detected from canvas width)
@@ -28,6 +32,10 @@ All cards are the same size and shape. No visual hierarchy among individual item
 - No hierarchical ordering — alphabetical or source-order within groups
 
 ## Edge Routing
+
+Current v1 shipped behavior: standard rendered edges remain visible. Mosaic does not currently ship a "no visible edges except on hover" mode in the engine.
+
+Future routing/presentation intent:
 
 - **No visible edges.** Connections are implied by proximity and grouping.
 - Optional: on hover, faint dotted lines show connections from the hovered card

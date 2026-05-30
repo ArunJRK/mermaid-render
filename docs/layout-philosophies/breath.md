@@ -24,7 +24,15 @@ The most important node (root, entry point, or central concept) is visually emph
 
 ## Layout Algorithm
 
-Same dagre but 3-4x spacing multiplier. Node minimum 200x60. Font 18px.
+Current v1 shipped behavior: Dagre layout with the Breath theme/spacing preset. There is no dedicated center-out or presentation-specific layout engine in the current runtime.
+
+Today this means:
+
+- node positioning still comes from the shared Dagre path
+- the "breath" feel comes from wider spacing, lighter edge treatment, and the calmer theme language
+- it is appropriate for presentation-style flowcharts, but it should not be described as shipping a distinct radial/gravitational solver today
+
+Future dedicated-engine intent:
 
 - **Center the focal node.** The most connected or explicitly marked root node sits at the visual center.
 - **Radiate outward.** Connected nodes spread outward from center. Not a strict radial layout — more of a "gravitational pull" that keeps the center important.
@@ -34,7 +42,9 @@ Same dagre but 3-4x spacing multiplier. Node minimum 200x60. Font 18px.
 
 ## Edge Routing
 
-1px thin lines, 0.3 opacity — "whisper lines". Barely visible.
+Current v1 shipped behavior: Dagre-style edges rendered with Breath's lighter "whisper line" treatment. This philosophy does not currently hide most edges by default or switch edge labels to hover-only behavior at the engine level.
+
+Future routing/presentation intent:
 
 - **Minimal edges visible.** If a node has many connections, show only the most important by default. Others appear on hover or selection.
 - **No edge labels by default.** Labels add clutter. Show them on hover or when the user selects an edge. Exception: if a label is critical to understanding (like "authenticates" vs "reads from"), it stays.

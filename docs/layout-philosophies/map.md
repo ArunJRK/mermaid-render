@@ -24,7 +24,15 @@ Subgraphs are real visual containers, not just labels. They have padding, distin
 
 ## Layout Algorithm
 
-Force-directed via d3-force (~30KB). Node attraction (connected pull), node repulsion (all push apart), cluster gravity (same subgraph -> group center). Simulation runs ~2s then freezes. Can enable "breathing" mode where simulation stays alive.
+Current v1 shipped behavior: Dagre layout with the Map theme/spacing preset. There is no dedicated force-directed engine in the current runtime.
+
+Today this means:
+
+- node positioning still comes from the shared Dagre path
+- the "map" feel comes from spacing, subgraph treatment, color, and overall visual density
+- it is useful as a higher-level survey view, but it should not be described as a shipped force simulation or cluster solver
+
+Future intent, not current runtime behavior, is a force-directed layout with group-aware clustering. If/when a dedicated Map engine ships, the design target is:
 
 - **Groups first, nodes second.** Layout starts by positioning groups (subgraphs) relative to each other. Then nodes within each group are laid out independently. This prevents a single group's internal complexity from distorting the overall map.
 - **Grid alignment between groups.** Groups snap to an implicit grid. This creates order at the macro level even if individual groups have organic internal layouts.
@@ -34,7 +42,9 @@ Force-directed via d3-force (~30KB). Node attraction (connected pull), node repu
 
 ## Edge Routing
 
-Curved lines, naturally avoid crossing due to force positioning. Edge bundling between clusters.
+Current v1 shipped behavior: Dagre-style edges with Map visual treatment. This philosophy does not currently ship bundled or force-relaxed edge routing.
+
+Future routing intent:
 
 - **Curved edges within groups.** Softer curves within a group feel organic and help distinguish from the straighter inter-group connections.
 - **Edge bundling.** When multiple edges leave one group heading to the same target group, bundle them visually. Three lines becoming one line says "these things all talk to that region."

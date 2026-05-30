@@ -23,6 +23,8 @@ Nodes that are part of the same sequential flow move in the same direction. A to
 
 Dagre + flow lanes. Detect longest path = center lane. Decision nodes split: Yes->right lane, No->left lane. After merge, return to center.
 
+Current v1 shipped behavior includes one important fallback: when a graph has many subgraphs and the lane metaphor stops making sense, the runtime falls back to the shared Dagre path instead of forcing narrative lanes onto a broad overview map.
+
 - **Single dominant axis.** The main path flows along one direction (TD or LR). No switching mid-diagram.
 - **Main path detection.** The longest path from entry to exit is the "spine." Layout prioritizes keeping this path straight and centered.
 - **Branches offset.** Side branches are visually indented from the spine. They don't compete for center stage.
@@ -32,6 +34,8 @@ Dagre + flow lanes. Detect longest path = center lane. Decision nodes split: Yes
 ## Edge Routing
 
 Smooth bezier curves following lane direction.
+
+This is still a best-effort readability path, not a collision-free router. Narrative trims edges to node boundaries and favors the story spine, but it does not promise Blueprint-style obstacle avoidance.
 
 - **Minimal crossings.** Edge crossing is the single biggest readability killer. The layout engine should optimize for fewest crossings even at the cost of extra spacing.
 

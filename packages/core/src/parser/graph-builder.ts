@@ -10,6 +10,11 @@ import { extractDirectives } from './directive-extractor'
 import { parseMermaid } from './mermaid-adapter'
 import { buildFlowchartGraph } from './adapters/flowchart'
 
+function inferDeclaredDiagramType(source: string): string {
+  const match = source.match(/^\s*([A-Za-z][A-Za-z0-9_-]*)/m)
+  return match?.[1] ?? 'unknown'
+}
+
 /**
  * Full orchestrator: extract directives, parse mermaid, build graph, attach links.
  */
@@ -131,6 +136,21 @@ export async function buildGraph(
 
   // Step 3: Build graph via adapter (currently only flowchart)
   const { diagramType, db, direction } = parseResult
+  if (diagramType !== 'flowchart') {
+    const declaredDiagramType =
+      diagramType === 'unknown' ? inferDeclaredDiagramType(cleanedSource) : diagramType
+    return {
+      success: false,
+      errors: [
+        {
+          code: 'UNSUPPORTED_DIAGRAM_TYPE',
+          message: `Unsupported Mermaid diagram type "${declaredDiagramType}". v1 currently supports flowchart only.`,
+        },
+      ],
+      warnings: [...extractionWarnings],
+    }
+  }
+
   const graph = buildFlowchartGraph({
     db,
     direction,

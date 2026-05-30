@@ -90,6 +90,21 @@ graph TD
     expect(result.errors[0].code).toBe('PARSE_FAILED')
   })
 
+  it('returns an explicit error for unsupported Mermaid diagram families', async () => {
+    const source = `classDiagram
+    Animal <|-- Dog
+    class Animal
+    class Dog`
+
+    const result = await buildGraph(source)
+
+    expect(result.success).toBe(false)
+    expect(result.errors).toHaveLength(1)
+    expect(result.errors[0].code).toBe('UNSUPPORTED_DIAGRAM_TYPE')
+    expect(result.errors[0].message).toContain('classDiagram')
+    expect(result.errors[0].message).toContain('flowchart only')
+  })
+
   it('parses edge labels', async () => {
     const source = `graph TD
     A -->|yes| B

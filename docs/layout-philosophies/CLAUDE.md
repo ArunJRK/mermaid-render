@@ -5,14 +5,14 @@ Current parser reality: the shipped v1 parser path is `flowchart` only. When a p
 
 ## What Is a Philosophy?
 
-A layout philosophy is an opinionated rendering preset that controls FOUR axes:
+A layout philosophy is an opinionated rendering preset that can control FOUR axes:
 
 1. **Layout Algorithm** — how nodes are positioned (dagre, force-directed, radial, grid)
 2. **Edge Routing** — how connections are drawn (bezier, orthogonal, straight, none)
 3. **Node Arrangement** — how groups/clusters behave (lanes, clusters, rings, cards)
 4. **Visual Identity** — colors, fonts, backgrounds, animations
 
-A philosophy is NOT just colors and spacing. It fundamentally changes the rendering output.
+In the abstract, a philosophy can change all four axes. In the current v1 release, only `narrative` and `blueprint` actually ship dedicated layout-engine behavior; the others are mostly theme/spacing presets layered on the shared Dagre path.
 
 ## Philosophy Registry
 
@@ -56,4 +56,4 @@ Each shipped philosophy maps to:
 - Optionally a different layout engine
 - Optionally different edge rendering logic in `edge-graphic.ts`
 
-The `MermaidRenderer` reads the philosophy from the `@layout` directive or programmatic option and wires up the correct layout engine + theme + edge renderer.
+The `MermaidRenderer` reads the philosophy from the `@layout` directive or programmatic option and wires up the current layout/theme/edge-rendering behavior that actually exists in code. Do not describe a future algorithm as shipped unless there is a matching implementation in `packages/core/src/`.
