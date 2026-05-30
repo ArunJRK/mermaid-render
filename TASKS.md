@@ -12,6 +12,13 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
 - The current full release gate is green on this tree:
   - `pnpm verify:core`
   - lint, typecheck, unit tests, browser tests, core build, demo build, bundle check, and `npm pack --dry-run` all passed together
+- External GitHub Actions evidence now exists for the current tree too:
+  - workflow: `Core Verify`
+  - run: `26679761812`
+  - commit: `cb00a8f`
+  - trigger: push to `main`
+  - result: `success`
+  - nuance: this is the real `.github/workflows/core.yml` gate on the current tree, but it is a `push` run, not a fresh `pull_request` run, so item `12`'s exact "CI green on PR" wording still lacks one last same-workflow PR-shaped proof artifact
 - Current verified results from that gate:
   - unit suite: `142` passed
   - browser suite: `83` passed
