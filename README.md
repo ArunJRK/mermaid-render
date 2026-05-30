@@ -2,6 +2,8 @@
 
 `@mermaid-render/core` is a framework-agnostic Mermaid rendering engine for the web. It mounts into a `<canvas>`, renders with PixiJS on a GPU backend, and adds zoom, pan, folding, and cross-file navigation.
 
+Product landing page: [Mermaid Monkey](https://arunjrk.github.io/mermaid-render/)
+
 ## Why?
 
 Mermaid is great for defining diagrams as code. But the output is a static SVG — no zoom, no folding, no way to handle complexity. Large diagrams become unreadable, and there's no way to split them across files.
@@ -199,13 +201,22 @@ Static demo build:
 pnpm --filter @mermaid-render/core build:demo
 ```
 
-Preview the built static artifact locally:
+Marketing site:
+
+```bash
+pnpm build:site
+pnpm preview:site
+```
+
+The marketing site output is written to `packages/site/dist/` and deployed to GitHub Pages by the `Site` workflow.
+
+Preview the built core demo artifact locally:
 
 ```bash
 pnpm --filter @mermaid-render/core preview:demo
 ```
 
-The output is written to `packages/core/dist-demo/` and can be served by any static host.
+The core demo output is written to `packages/core/dist-demo/` and can be served by any static host.
 
 Release and deploy steps are documented in [docs/release.md](docs/release.md).
 

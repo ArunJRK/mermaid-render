@@ -1,0 +1,18 @@
+{
+  "name": "@mermaid-render/site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev --host 127.0.0.1 --port 3001",
+    "typecheck": "tsc --noEmit",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 4174"
+  },
+  "dependencies": {
+    "@mermaid-render/core": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vite": "^8.0.3"
+  }
+}

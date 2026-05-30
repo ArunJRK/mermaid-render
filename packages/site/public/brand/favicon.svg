@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Mermaid Monkey glyph</title>
+  <defs>
+    <linearGradient id="g" x1="10" y1="8" x2="54" y2="58" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5BA8FF"/>
+      <stop offset="1" stop-color="#7D6CFF"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#08090C"/>
+  <path d="M17 46c5-18 16-16 25-26 1 8 7 12 14 9-4 8-11 10-19 8-7-1-13 2-20 9Z" fill="url(#g)"/>
+  <path d="M16 46c10-10 20-12 31-8" fill="none" stroke="#08090C" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="15" cy="47" r="6" fill="#7D6CFF"/>
+  <circle cx="33" cy="34" r="5.5" fill="#5BA8FF"/>
+  <circle cx="49" cy="49" r="6" fill="#7D6CFF"/>
+</svg>

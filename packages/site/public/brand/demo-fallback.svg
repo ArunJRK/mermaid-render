@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 460" role="img" aria-labelledby="title desc">
+  <title id="title">Mermaid Monkey static fallback diagram</title>
+  <desc id="desc">A static diagram showing Mermaid syntax flowing into parse, layout, GPU canvas, folding, and cross-file links.</desc>
+  <defs>
+    <linearGradient id="accent" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#5ba8ff"/>
+      <stop offset="1" stop-color="#7d6cff"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="860" height="460" rx="24" fill="#08090c"/>
+  <circle cx="710" cy="90" r="180" fill="#5ba8ff" opacity=".12"/>
+  <circle cx="260" cy="360" r="220" fill="#7d6cff" opacity=".10"/>
+  <g fill="none" stroke="#ffffff" stroke-opacity=".07">
+    <path d="M0 92h860M0 184h860M0 276h860M0 368h860"/>
+    <path d="M172 0v460M344 0v460M516 0v460M688 0v460"/>
+  </g>
+  <g font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700">
+    <g filter="url(#glow)">
+      <rect x="70" y="80" width="210" height="74" rx="14" fill="#10131a" stroke="#5ba8ff" stroke-opacity=".46"/>
+      <text x="175" y="125" fill="#eaedf2" text-anchor="middle">Mermaid syntax</text>
+    </g>
+    <rect x="340" y="80" width="160" height="74" rx="14" fill="#10131a" stroke="#ffffff" stroke-opacity=".14"/>
+    <text x="420" y="125" fill="#eaedf2" text-anchor="middle">Parse</text>
+    <path d="M580 116l82-48 82 48-82 48z" fill="#10131a" stroke="#ffffff" stroke-opacity=".14"/>
+    <text x="662" y="124" fill="#eaedf2" text-anchor="middle">Layout</text>
+    <rect x="330" y="250" width="220" height="82" rx="16" fill="#10131a" stroke="#7d6cff" stroke-opacity=".48"/>
+    <text x="440" y="300" fill="#eaedf2" text-anchor="middle">GPU canvas</text>
+    <rect x="92" y="278" width="160" height="62" rx="14" fill="#161a23" stroke="#ffffff" stroke-opacity=".12"/>
+    <text x="172" y="318" fill="#8a92a3" text-anchor="middle" font-size="18">Fold</text>
+    <rect x="610" y="278" width="170" height="62" rx="14" fill="#161a23" stroke="#ffffff" stroke-opacity=".12"/>
+    <text x="695" y="318" fill="#8a92a3" text-anchor="middle" font-size="18">@link</text>
+  </g>
+  <g fill="none" stroke="url(#accent)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M280 117h56"/>
+    <path d="M500 117h72"/>
+    <path d="M662 164c0 68-70 80-122 103"/>
+    <path d="M330 290h-72"/>
+    <path d="M550 290h54"/>
+  </g>
+  <g fill="url(#accent)">
+    <path d="M332 109l14 8-14 8z"/>
+    <path d="M568 109l14 8-14 8z"/>
+    <path d="M542 258l-2 16-13-9z"/>
+    <path d="M262 282l-14 8 14 8z"/>
+    <path d="M600 282l14 8-14 8z"/>
+  </g>
+</svg>

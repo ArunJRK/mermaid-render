@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mermaid Monkey - interactive Mermaid canvas renderer</title>
+    <meta
+      name="description"
+      content="Mermaid Monkey turns Mermaid syntax into an interactive GPU-rendered canvas with zoom, pan, folding, and cross-file navigation."
+    />
+    <link rel="canonical" href="https://arunjrk.github.io/mermaid-render/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Mermaid Monkey" />
+    <meta
+      property="og:description"
+      content="Mermaid syntax in, interactive GPU-rendered canvas out."
+    />
+    <meta property="og:url" content="https://arunjrk.github.io/mermaid-render/" />
+    <meta property="og:image" content="https://arunjrk.github.io/mermaid-render/brand/social-card.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Mermaid Monkey" />
+    <meta
+      name="twitter:description"
+      content="Mermaid syntax in, interactive GPU-rendered canvas out."
+    />
+    <meta name="twitter:image" content="https://arunjrk.github.io/mermaid-render/brand/social-card.png" />
+    <meta name="theme-color" content="#08090c" />
+    <link rel="icon" href="./brand/favicon.ico" sizes="any" />
+    <link rel="icon" href="./brand/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./brand/apple-touch-icon.png" />
+    <script type="module" src="./src/main.ts"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#demo">Skip to live demo</a>
+    <header class="site-header" aria-label="Primary">
+      <a class="brand-link" href="#top" aria-label="Mermaid Monkey home">
+        <img src="./brand/logo-mark-dark.svg" alt="" width="34" height="34" />
+        <span>Mermaid Monkey</span>
+      </a>
+      <nav class="nav-links" aria-label="Project links">
+        <a href="#features">Features</a>
+        <a href="#quickstart">Quickstart</a>
+        <a href="https://github.com/ArunJRK/mermaid-render">GitHub</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero-shell" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow">Mermaid Monkey for @mermaid-render/core</p>
+          <h1 id="hero-title">Mermaid Monkey</h1>
+          <p class="hero-lede">
+            Mermaid syntax in, interactive GPU-rendered canvas out.
+          </p>
+          <p class="hero-sublede">
+            Zoom, pan, fold, and jump across files without turning your diagrams into static SVG fossils.
+          </p>
+
+          <div class="cta-row" aria-label="Primary actions">
+            <a class="button primary" href="#quickstart">
+              <span class="button-icon" aria-hidden="true">↧</span>
+              Get Started
+            </a>
+            <a class="button secondary" href="https://github.com/ArunJRK/mermaid-render">
+              <span class="button-icon" aria-hidden="true">⌘</span>
+              GitHub
+            </a>
+            <a class="button secondary" href="https://www.npmjs.com/package/@mermaid-render/core">
+              <span class="button-icon" aria-hidden="true">▣</span>
+              npm
+            </a>
+          </div>
+
+          <div class="install-strip" aria-label="Install command">
+            <code id="install-command">pnpm add @mermaid-render/core</code>
+            <button class="icon-button" type="button" data-copy-target="install-command" aria-label="Copy install command">
+              <span aria-hidden="true">□</span>
+            </button>
+          </div>
+
+          <dl class="status-badges" aria-label="Project status">
+            <div>
+              <dt>npm</dt>
+              <dd>v1.0.0</dd>
+            </div>
+            <div>
+              <dt>bundle</dt>
+              <dd>868KB gz</dd>
+            </div>
+            <div>
+              <dt>license</dt>
+              <dd>MIT</dd>
+            </div>
+            <div>
+              <dt>CI</dt>
+              <dd>Pages + core</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div class="mascot-stage" aria-label="Mermaid Monkey mascot">
+          <img src="./brand/mascot.png" alt="Mermaid Monkey mascot with a glowing mermaid tail" />
+        </div>
+      </section>
+
+      <section class="demo-section" id="demo" aria-labelledby="demo-title">
+        <div class="section-heading compact">
+          <p class="eyebrow">Live engine demo</p>
+          <h2 id="demo-title">A real canvas, not a screenshot</h2>
+          <p>
+            The demo below lazy-loads @mermaid-render/core, mounts PixiJS into the canvas, and uses the same virtual file resolver contract as the embeddable API.
+          </p>
+        </div>
+
+        <div class="demo-frame">
+          <div class="demo-toolbar" aria-label="Demo controls">
+            <div class="segmented-control" aria-label="Layout philosophy">
+              <button type="button" data-layout="narrative" aria-pressed="true">Narrative</button>
+              <button type="button" data-layout="blueprint" aria-pressed="false">Blueprint</button>
+            </div>
+            <div class="tool-buttons">
+              <button type="button" data-demo-action="fold">Fold</button>
+              <button type="button" data-demo-action="unfold">Unfold</button>
+              <button type="button" data-demo-action="fit">Fit</button>
+            </div>
+          </div>
+          <div class="demo-canvas-wrap">
+            <canvas id="demo-canvas" aria-label="Interactive Mermaid Monkey renderer demo. Use pointer gestures to pan and zoom the diagram."></canvas>
+            <div class="demo-loading" id="demo-loading" role="status">Warming up the renderer...</div>
+            <div class="demo-fallback" id="demo-fallback" hidden>
+              <img src="./brand/demo-fallback.svg" alt="Static fallback diagram showing Mermaid source flowing into an interactive canvas." />
+              <p>Rendering is unavailable in this browser context. The same diagram is shown as a readable fallback.</p>
+            </div>
+          </div>
+          <p class="demo-status" id="demo-status" aria-live="polite">Preparing demo...</p>
+        </div>
+      </section>
+
+      <section class="features-section" id="features" aria-labelledby="features-title">
+        <div class="section-heading">
+          <p class="eyebrow">What ships today</p>
+          <h2 id="features-title">Built for Mermaid projects that outgrow flat SVG</h2>
+        </div>
+        <div class="feature-grid">
+          <article>
+            <span class="feature-icon" aria-hidden="true">⌕</span>
+            <h3>Interactive canvas</h3>
+            <p>GPU-backed zoom, pan, fit, and reset for diagrams that need room.</p>
+          </article>
+          <article>
+            <span class="feature-icon" aria-hidden="true">▤</span>
+            <h3>Node folding</h3>
+            <p>Collapse subgraphs to keep large flows readable without leaving the page.</p>
+          </article>
+          <article>
+            <span class="feature-icon" aria-hidden="true">⇄</span>
+            <h3>Cross-file links</h3>
+            <p>Use allowlisted @link navigation across virtual .mmd projects in-browser.</p>
+          </article>
+          <article>
+            <span class="feature-icon" aria-hidden="true">◆</span>
+            <h3>Two real layouts</h3>
+            <p>Narrative and Blueprint are the v1 engines; other names are visual presets.</p>
+          </article>
+          <article>
+            <span class="feature-icon" aria-hidden="true">◈</span>
+            <h3>WebGPU/WebGL path</h3>
+            <p>Prefers WebGPU when available and falls back to WebGL when it is not.</p>
+          </article>
+          <article>
+            <span class="feature-icon" aria-hidden="true">≋</span>
+            <h3>Mermaid-compatible</h3>
+            <p>Flowchart Mermaid syntax stays the authoring format; interactivity is added at render time.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="io-section" aria-labelledby="io-title">
+        <div class="section-heading compact">
+          <p class="eyebrow">Mermaid in → canvas out</p>
+          <h2 id="io-title">Plain source becomes a living diagram</h2>
+        </div>
+        <div class="io-grid">
+          <div class="code-panel">
+            <div class="panel-header">
+              <span>source.mmd</span>
+              <button class="icon-button small" type="button" data-copy-target="source-snippet" aria-label="Copy Mermaid source">
+                <span aria-hidden="true">□</span>
+              </button>
+            </div>
+            <pre><code id="source-snippet">%% @link docs -&gt; ./details#hydrate
+graph TD
+  syntax[Mermaid syntax] --&gt; parse[Parse]
+  parse --&gt; layout{Narrative or Blueprint}
+  layout --&gt; canvas[GPU canvas]
+  subgraph Project files
+    docs[docs/architecture.mmd]
+    canvas --&gt; fold[Fold subgraphs]
+  end</code></pre>
+          </div>
+          <div class="output-card">
+            <img src="./brand/demo-fallback.svg" alt="Diagram output preview that mirrors the live demo content." />
+          </div>
+        </div>
+      </section>
+
+      <section class="quickstart-section" id="quickstart" aria-labelledby="quickstart-title">
+        <div class="section-heading compact">
+          <p class="eyebrow">Embed API</p>
+          <h2 id="quickstart-title">Mount it anywhere you can provide a canvas</h2>
+        </div>
+        <div class="code-panel wide">
+          <div class="panel-header">
+            <span>embed.ts</span>
+            <button class="icon-button small" type="button" data-copy-target="embed-snippet" aria-label="Copy embed snippet">
+              <span aria-hidden="true">□</span>
+            </button>
+          </div>
+          <pre><code id="embed-snippet">import {
+  MermaidRenderer,
+  createVirtualFileResolver,
+} from '@mermaid-render/core'
+
+const canvas = document.querySelector('canvas')
+if (!canvas) throw new Error('Missing canvas')
+
+const files = {
+  '/docs/root.mmd': `%% @link details -&gt; ./details#hydrate
+graph TD
+  source[Mermaid] --&gt; details[Interactive canvas]`,
+  '/docs/details.mmd': `graph TD
+  hydrate[Hydrate renderer] --&gt; pan[Pan and zoom]`,
+}
+
+const renderer = new MermaidRenderer({ themeMode: 'system' })
+const linkResolver = createVirtualFileResolver(files)
+
+await renderer.mount(canvas)
+await renderer.load(files['/docs/root.mmd'], {
+  sourcePath: '/docs/root.mmd',
+  linkResolver,
+})</code></pre>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <a href="https://github.com/ArunJRK/mermaid-render">GitHub</a>
+      <a href="https://www.npmjs.com/package/@mermaid-render/core">npm</a>
+      <a href="https://github.com/ArunJRK/mermaid-render/blob/main/docs/vision.md">Docs</a>
+      <a href="https://github.com/ArunJRK/mermaid-render/blob/main/docs/pain-points.md">Problem list</a>
+      <a href="https://github.com/ArunJRK/mermaid-render/blob/main/LICENSE">MIT</a>
+      <span>Built by ArunJRK</span>
+    </footer>
+  </body>
+</html>

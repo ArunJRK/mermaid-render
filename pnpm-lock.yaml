@@ -51,6 +51,19 @@ importers:
         specifier: ^3.0.0
         version: 3.2.4(jsdom@25.0.1)(lightningcss@1.32.0)
 
+  packages/site:
+    dependencies:
+      '@mermaid-render/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vite:
+        specifier: ^8.0.3
+        version: 8.0.3(esbuild@0.27.4)
+
   packages/vscode:
     dependencies:
       '@mermaid-render/core':
