@@ -143,6 +143,12 @@ type VisibilityPauseProbe = {
   restoredRunning: boolean
 }
 
+type RelayoutVisibilityPauseProbe = {
+  nodeMovedBeforeHide: boolean
+  stayedStillWhileHidden: boolean
+  resumedAfterVisible: boolean
+}
+
 type IdlePauseProbe = {
   runningImmediatelyAfterLoad: boolean
   stoppedAfterIdle: boolean
@@ -3209,6 +3215,21 @@ graph TD
     expect(probe.initiallyRunning).toBeTruthy()
     expect(probe.hiddenRunning).toBeFalsy()
     expect(probe.restoredRunning).toBeTruthy()
+    expect(pageErrors).toEqual([])
+  })
+
+  test('pauses active relayout motion while hidden and resumes it when visible again', async ({ page }) => {
+    const pageErrors = await attachPageErrorTracking(page)
+    await page.goto('/lifecycle-harness.html')
+    await page.waitForFunction(() => Boolean((window as any).__LIFECYCLE_HARNESS__))
+
+    const probe = await page.evaluate(async (): Promise<RelayoutVisibilityPauseProbe> => {
+      return await (window as any).__LIFECYCLE_HARNESS__.runRelayoutVisibilityPauseProbe()
+    })
+
+    expect(probe.nodeMovedBeforeHide).toBe(true)
+    expect(probe.stayedStillWhileHidden).toBe(true)
+    expect(probe.resumedAfterVisible).toBe(true)
     expect(pageErrors).toEqual([])
   })
 

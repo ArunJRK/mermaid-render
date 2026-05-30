@@ -625,7 +625,18 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
    - verified with:
      - `pnpm --filter @mermaid-render/core test -- --run src/renderer/__tests__/animation-clock.test.ts`
 
-24. `goal.md` item 36 now has direct browser/runtime proof in addition to docs and unit coverage:
+25. `goal.md` item 50 now also has direct browser proof on the active relayout path, not only on a settled scene:
+   - extended `packages/core/dev/lifecycle-harness.ts` with a relayout-visibility probe that:
+     - starts a real narrative → radial relayout
+     - hides the document while a node is mid-motion
+     - proves the node stops moving while hidden
+     - proves the same relayout resumes after visibility is restored
+   - added browser proof in `packages/core/tests/browser/render.spec.ts`:
+     - `pauses active relayout motion while hidden and resumes it when visible again`
+   - verified with:
+     - `pnpm --filter @mermaid-render/core exec playwright test -g "pauses and resumes the ticker on visibility changes|pauses active relayout motion while hidden and resumes it when visible again|stops the ticker after idle and restarts on pointer activity"`
+
+26. `goal.md` item 36 now has direct browser/runtime proof in addition to docs and unit coverage:
    - existing implementation already enforced the trust boundary:
      - `normalizeDiagramPath(...)` rejects URL targets and out-of-scope traversal
      - `buildGraph(...)` converts that into `LINK_TARGET_OUT_OF_SCOPE` plus a broken `LinkState`

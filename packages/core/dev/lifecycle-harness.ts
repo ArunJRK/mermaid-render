@@ -34,6 +34,12 @@ type VisibilityPauseResult = {
   restoredRunning: boolean
 }
 
+type RelayoutVisibilityPauseResult = {
+  nodeMovedBeforeHide: boolean
+  stayedStillWhileHidden: boolean
+  resumedAfterVisible: boolean
+}
+
 type IdlePauseResult = {
   runningImmediatelyAfterLoad: boolean
   stoppedAfterIdle: boolean
@@ -71,6 +77,7 @@ declare global {
       runContextRecovery(): Promise<ContextRecoveryResult>
       runContextRecoveryVisualProbe(): Promise<ContextRecoveryVisualResult>
       runVisibilityPauseProbe(): Promise<VisibilityPauseResult>
+      runRelayoutVisibilityPauseProbe(): Promise<RelayoutVisibilityPauseResult>
       runIdlePauseProbe(): Promise<IdlePauseResult>
       runAdapterFallbackProbe(): Promise<AdapterFallbackResult>
       runAdapterFallbackVisualProbe(): Promise<AdapterFallbackVisualResult>
@@ -404,6 +411,123 @@ window.__LIFECYCLE_HARNESS__ = {
         initiallyRunning,
         hiddenRunning,
         restoredRunning,
+      }
+    } finally {
+      renderer.destroy()
+      if (originalVisibilityDescriptor) {
+        Object.defineProperty(document, 'visibilityState', originalVisibilityDescriptor)
+      } else {
+        delete (document as { visibilityState?: DocumentVisibilityState }).visibilityState
+      }
+      if (originalGpuDescriptor) {
+        Object.defineProperty(navigator, 'gpu', originalGpuDescriptor)
+      }
+    }
+  },
+  async runRelayoutVisibilityPauseProbe(): Promise<RelayoutVisibilityPauseResult> {
+    const originalGpuDescriptor = Object.getOwnPropertyDescriptor(navigator, 'gpu')
+    try {
+      Object.defineProperty(navigator, 'gpu', {
+        configurable: true,
+        value: undefined,
+      })
+    } catch {
+      // ignore if the browser does not let us override this property
+    }
+
+    const canvasA = document.getElementById('canvas-a') as HTMLCanvasElement
+    const renderer = new MermaidRenderer()
+    const source = `%% @layout narrative
+graph TD
+  A[Start]
+  B[Plan]
+  C[Build]
+  D[Ship]
+  E[Review]
+  A --> B
+  A --> C
+  B --> D
+  C --> D
+  C --> E`
+    const originalVisibilityDescriptor = Object.getOwnPropertyDescriptor(document, 'visibilityState')
+    const documentPrototype = Object.getPrototypeOf(document) as Document
+    const prototypeVisibilityDescriptor = Object.getOwnPropertyDescriptor(documentPrototype, 'visibilityState')
+    let simulatedVisibilityState: DocumentVisibilityState | null = null
+
+    try {
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        get: () => simulatedVisibilityState ?? prototypeVisibilityDescriptor?.get?.call(document) ?? 'visible',
+      })
+    } catch {
+      // ignore if the browser does not let us override this property
+    }
+
+    const readNodePosition = (nodeId: string) => {
+      const sprite = ((renderer as any)._nodeSprites as Map<string, { x: number; y: number }> | undefined)?.get(nodeId)
+      return sprite ? { x: sprite.x, y: sprite.y } : null
+    }
+
+    try {
+      await withTimeout(renderer.mount(canvasA), 'relayout visibility mount')
+      await withTimeout(renderer.load(source), 'relayout visibility load')
+      const start = readNodePosition('D')
+      if (!start) throw new Error('moving node not found before relayout')
+
+      renderer.setPhilosophy('radial')
+
+      const beforeHide = await withTimeout(
+        new Promise<{ x: number; y: number }>((resolve, reject) => {
+          const started = performance.now()
+          const tick = () => {
+            const current = readNodePosition('D')
+            if (current && Math.hypot(current.x - start.x, current.y - start.y) > 6) {
+              resolve(current)
+              return
+            }
+            if (performance.now() - started > 5000) {
+              reject(new Error('relayout did not start moving before hide'))
+              return
+            }
+            window.setTimeout(tick, 16)
+          }
+          tick()
+        }),
+        'relayout movement before hide',
+      )
+
+      simulatedVisibilityState = 'hidden'
+      document.dispatchEvent(new Event('visibilitychange'))
+      await new Promise((resolve) => window.setTimeout(resolve, 180))
+      const hidden = readNodePosition('D')
+
+      simulatedVisibilityState = 'visible'
+      document.dispatchEvent(new Event('visibilitychange'))
+
+      const afterVisible = await withTimeout(
+        new Promise<{ x: number; y: number }>((resolve, reject) => {
+          const started = performance.now()
+          const tick = () => {
+            const current = readNodePosition('D')
+            if (current && hidden && Math.hypot(current.x - hidden.x, current.y - hidden.y) > 4) {
+              resolve(current)
+              return
+            }
+            if (performance.now() - started > 5000) {
+              reject(new Error('relayout did not resume after visibility restore'))
+              return
+            }
+            window.setTimeout(tick, 16)
+          }
+          tick()
+        }),
+        'relayout movement after visible',
+      )
+
+      return {
+        nodeMovedBeforeHide: Math.hypot(beforeHide.x - start.x, beforeHide.y - start.y) > 6,
+        stayedStillWhileHidden: hidden ? Math.hypot(hidden.x - beforeHide.x, hidden.y - beforeHide.y) <= 0.5 : false,
+        resumedAfterVisible: hidden ? Math.hypot(afterVisible.x - hidden.x, afterVisible.y - hidden.y) > 4 : false,
       }
     } finally {
       renderer.destroy()
