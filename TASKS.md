@@ -1454,10 +1454,10 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
      - active preview philosophy
      - preview node labels
    - browser suite now proves:
-     - the hover preview stays stable while the pointer moves in small steps from the node into the popup
-     - delayed preview resolve does not show a stale popup after pointer-leave
-     - delayed preview resolve anchors to the node's CURRENT screen position after the view zoom changes during the debounce window
-     - delayed preview resolve also anchors to the node's CURRENT screen position after a pure viewport move with no scale change
+     - `goal.md` item `37`: the hover preview stays stable while the pointer moves in small steps from the node into the popup
+     - `goal.md` item `37`: delayed preview resolve does not show a stale popup after pointer-leave
+     - `goal.md` item `37`: delayed preview resolve anchors to the node's CURRENT screen position after the view zoom changes during the debounce window
+     - `goal.md` item `37`: delayed preview resolve also anchors to the node's CURRENT screen position after a pure viewport move with no scale change
      - preview cache is invalidated on reload and picks up changed target-file content
      - preview renders using the target file's own philosophy instead of assuming the host layout
    - browser suite count is now `39`
