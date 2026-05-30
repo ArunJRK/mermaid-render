@@ -48,8 +48,8 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
   - it serves `packages/core/dist-demo/` from a plain static HTTP server and proves the built artifact renders, switches philosophy, follows a cross-file link, and responds to the file picker
 - The GPU/lifecycle slice now has its own focused browser gate:
   - `pnpm --filter @mermaid-render/core test:browser:lifecycle`
-  - current result: `9` passed
-  - it isolates multi-instance behavior, lifecycle misuse errors, synthetic WebGL context recovery, no-adapter WebGPU fallback, visibility/idle ticker behavior, readable fallback states, and the WebGPU device-loss probe path
+  - current result: `10` passed
+  - it isolates multi-instance behavior, lifecycle misuse errors, destroy-time cleanup of handlers/timers/live-canvas ownership, synthetic WebGL context recovery, no-adapter WebGPU fallback, visibility/idle ticker behavior, readable fallback states, and the WebGPU device-loss probe path
   - the WebGPU device-loss probe now also keeps a committed harness artifact for its terminal state when no usable adapter exists, instead of relying only on the returned probe object
   - `goal.md` item `44` is now treated as two parts:
     - `44a` is the common-path proof surface: synthetic WebGL context loss / restore plus WebGPU-no-adapter fallback

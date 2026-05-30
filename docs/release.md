@@ -150,6 +150,7 @@ That focused run covers:
 
 - multi-instance coexistence
 - lifecycle misuse errors
+- destroy-time cleanup of handlers, timers, preview state, and live-canvas ownership
 - synthetic WebGL context loss / restore
 - WebGPU-present-but-no-adapter fallback to WebGL
 - visibility pause / resume

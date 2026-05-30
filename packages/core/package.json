@@ -24,7 +24,7 @@
     "build:demo": "vite build --emptyOutDir --outDir ../dist-demo",
     "test": "vitest run",
     "test:browser": "playwright test",
-    "test:browser:lifecycle": "playwright test -g \"supports multiple live renderers on one page|guards lifecycle misuse with clear errors|recovers after synthetic WebGL context loss|falls back to WebGL when the WebGPU API exists but no adapter is available|pauses and resumes the ticker on visibility changes|stops the ticker after idle and restarts on pointer activity|shows a readable fallback state when renderer initialization fails|shows a readable fallback state when no usable GPU backend is available|recovers from WebGPU device loss when available, or reports adapter constraints without hanging\"",
+    "test:browser:lifecycle": "playwright test -g \"supports multiple live renderers on one page|guards lifecycle misuse with clear errors|releases listeners, timers, and canvas ownership state on destroy|recovers after synthetic WebGL context loss|falls back to WebGL when the WebGPU API exists but no adapter is available|pauses and resumes the ticker on visibility changes|stops the ticker after idle and restarts on pointer activity|shows a readable fallback state when renderer initialization fails|shows a readable fallback state when no usable GPU backend is available|recovers from WebGPU device loss when available, or reports adapter constraints without hanging\"",
     "test:browser:static-demo": "pnpm build:demo && playwright test -c playwright.static.config.ts",
     "test:watch": "vitest",
     "dev": "vite dev",
