@@ -756,11 +756,13 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
      - hide subgraph chevrons/count badges
    - browser coverage now also proves:
      - cross-file hover previews are suppressed on large linked graphs in stress mode
+     - layout switches on large stress graphs skip relayout fade and in-place motion work instead of burning animation time on an already-degraded scene
    - screenshot-backed regression now also proves the simplified stress-mode canvas state:
      - `packages/core/tests/browser/render.spec.ts-snapshots/stress-mode-suppression-chromium-darwin.png`
    - verified with:
       - `pnpm --filter @mermaid-render/core exec playwright test -g "suppresses cross-file hover previews in stress mode"` → passed
       - `pnpm --filter @mermaid-render/core exec playwright test -g "suppresses secondary edge and subgraph detail in stress mode" --update-snapshots` → passed
+      - `pnpm --filter @mermaid-render/core exec playwright test -g "switches into stress mode for large graphs instead of only warning|suppresses secondary edge and subgraph detail in stress mode|suppresses cross-file hover previews in stress mode|skips relayout fade and motion work when switching layouts in stress mode"` → passed
       - `pnpm --filter @mermaid-render/core test:browser` → `52` passed
 
 33. `goal.md` item 9 now has focused browser proof for the responsive mobile shell:

@@ -3066,6 +3066,62 @@ graph TD
     expect(pageErrors).toEqual([])
   })
 
+  test('skips relayout fade and motion work when switching layouts in stress mode', async ({ page }) => {
+    const pageErrors = await attachPageErrorTracking(page)
+    await waitForDevApi(page)
+
+    const loaded = await page.evaluate(async () => {
+      return await window.__MERMAID_DEV__!.loadStressGraph(240)
+    })
+
+    expect(loaded).toBe(true)
+    await expect.poll(async () => (await snapshot(page)).performanceMode).toBe('stress')
+
+    const before = await page.evaluate(() => {
+      const nodes = window.__MERMAID_DEV__!.getRenderedNodeMetrics() as RenderedNodeMetrics[]
+      return nodes.slice(0, 8).map((node) => ({ id: node.id, x: node.center.x, y: node.center.y }))
+    })
+
+    await page.evaluate(() => {
+      window.__MERMAID_DEV__!.setLayout('radial')
+    })
+
+    const immediateState = await snapshot(page)
+    const immediate = await page.evaluate(() => {
+      const nodes = window.__MERMAID_DEV__!.getRenderedNodeMetrics() as RenderedNodeMetrics[]
+      return nodes.slice(0, 8).map((node) => ({ id: node.id, x: node.center.x, y: node.center.y }))
+    })
+
+    await page.waitForTimeout(180)
+
+    const laterState = await snapshot(page)
+    const later = await page.evaluate(() => {
+      const nodes = window.__MERMAID_DEV__!.getRenderedNodeMetrics() as RenderedNodeMetrics[]
+      return nodes.slice(0, 8).map((node) => ({ id: node.id, x: node.center.x, y: node.center.y }))
+    })
+
+    expect(immediateState.performanceMode).toBe('stress')
+    expect(immediateState.currentLayout).toBe('radial')
+    expect(immediateState.viewportAlpha).toBe(1)
+    expect(laterState.viewportAlpha).toBe(1)
+
+    const movedOnSwitch = immediate.some((node) => {
+      const prior = before.find((candidate) => candidate.id === node.id)
+      if (!prior) return false
+      return Math.hypot(node.x - prior.x, node.y - prior.y) > 10
+    })
+    expect(movedOnSwitch).toBe(true)
+
+    const keptMovingAfterSwitch = later.some((node) => {
+      const earlier = immediate.find((candidate) => candidate.id === node.id)
+      if (!earlier) return false
+      return Math.hypot(node.x - earlier.x, node.y - earlier.y) > 0.5
+    })
+    expect(keptMovingAfterSwitch).toBe(false)
+
+    expect(pageErrors).toEqual([])
+  })
+
   test('mounts through the documented embed API on a plain page', async ({ page }) => {
     const pageErrors = await attachPageErrorTracking(page)
     await page.goto('/embed-harness.html')
