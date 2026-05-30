@@ -180,6 +180,23 @@ Current result on the present tree:
 
 - `pnpm --filter @mermaid-render/core test:browser:relayout` -> `9` passed
 
+There is also a focused mixed unit + browser gate for the spring/runtime animation contract:
+
+```bash
+pnpm --filter @mermaid-render/core test:animation
+```
+
+That command covers:
+
+- spring guardrails against non-finite values and unbounded runtime
+- the renderer animation-clock fence
+- the relayout browser slice for items `48` through `50`
+
+Current result on the present tree:
+
+- spring + animation-clock unit slice: `12` passed
+- relayout browser slice: `9` passed
+
 Current environment expectation:
 
 - in ordinary CI or headless Chromium without a usable WebGPU adapter, the WebGPU probe should finish quickly with an explicit adapter-unavailable result instead of hanging

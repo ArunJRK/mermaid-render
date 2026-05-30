@@ -73,6 +73,12 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
   - while landing that focused gate, the moving-edge motion artifact was also stabilized:
     - `relayout-moving-edge-attached-chromium-darwin.png` now uses a fixed-size centered crop instead of geometry-derived image dimensions
     - that removed a real clustered-run flake where tiny motion differences changed the snapshot width by a few pixels
+- The spring/runtime animation slice now also has a first-class rerun path:
+  - `pnpm --filter @mermaid-render/core test:animation`
+  - current result:
+    - spring + animation-clock unit slice: `12` passed
+    - relayout browser slice: `9` passed
+  - this gives `goal.md` items `47` through `50` one concrete verification command instead of splitting the proof across ad hoc vitest and Playwright invocations
     - that remained true under:
       - default launch
       - `--enable-unsafe-webgpu --ignore-gpu-blocklist`
