@@ -25,6 +25,23 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
     - demo entry: `index-GB0OFqH4.js` `478.18 KiB` raw (`489659 bytes`) / `137.46 KiB` gzip (`140762 bytes`)
     - dry-run tarball: `mermaid-render-core-1.0.0.tgz`, package size `275.4 kB`
 - `docs/release.md` and `docs/tech.md` now match that fresh gate instead of the older `140` / `78` checkpoint.
+- Requirement-audit tie-backs on the current tree:
+  - `goal.md` item `7` is covered by the browser/lifecycle suite:
+    - regular render path proves a real GPU backend is active
+    - no-adapter path proves fallback to WebGL
+    - no-backend path proves readable unavailable state instead of white screen
+    - the WebGPU device-loss probe now proves the adapter-unavailable branch finishes visibly instead of hanging
+  - `goal.md` item `10` is no longer a vague cleanup bucket; it is represented by the accumulated browser invariants and the fresh green full gate on the shipped example corpus
+  - `goal.md` item `13` is covered by the shipped-example plus stress overlap probe, which proves no rendered node-on-node overlap across the visible demo corpus and the generated stress graph
+  - `goal.md` items `21`, `22`, `24`, `25`, and `26` now each have direct browser artifacts in addition to state/math assertions:
+    - expanded-bounds hover glow
+    - selection-cleared rebuild state
+    - ordinary fit-to-view framing
+    - fit-to-view recovery from stranded viewport
+    - zoom clamp min/max states
+  - `goal.md` item `39` now has paired preview-theme artifacts in addition to preview-state and font-family assertions
+  - `goal.md` item `52` now has a committed rendered-footprint routing artifact in addition to the segment-vs-rect proof
+  - `goal.md` item `55` remains intentionally enforced by numeric theme-contrast tests rather than screenshots, because the requirement itself is a documented contrast-ratio floor
 - `@mermaid-render/core` is now versioned `1.0.0`, and the verified dry-run tarball is `mermaid-render-core-1.0.0.tgz`.
 - The built static demo artifact now has its own reproducible smoke path:
   - `pnpm --filter @mermaid-render/core test:browser:static-demo`
@@ -33,6 +50,7 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
   - `pnpm --filter @mermaid-render/core test:browser:lifecycle`
   - current result: `9` passed
   - it isolates multi-instance behavior, lifecycle misuse errors, synthetic WebGL context recovery, no-adapter WebGPU fallback, visibility/idle ticker behavior, readable fallback states, and the WebGPU device-loss probe path
+  - the WebGPU device-loss probe now also keeps a committed harness artifact for its terminal state when no usable adapter exists, instead of relying only on the returned probe object
 - A focused browser regression now proves stress mode suppresses secondary detail instead of only warning:
   - edge labels are hidden on large stress graphs
   - subgraph chevrons and count badges are hidden on large stress graphs
@@ -61,6 +79,7 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
   - `packages/core/tests/browser/render.spec.ts-snapshots/relationship-selection-emphasis-chromium-darwin.png`
   - `packages/core/tests/browser/render.spec.ts-snapshots/selection-hover-coexistence-chromium-darwin.png`
   - `packages/core/tests/browser/render.spec.ts-snapshots/selection-only-node-state-chromium-darwin.png`
+  - `packages/core/tests/browser/render.spec.ts-snapshots/webgpu-device-loss-adapter-unavailable-harness-chromium-darwin.png`
   - `packages/core/tests/browser/render.spec.ts-snapshots/subgraph-depth-map-chromium-darwin.png`
   - `packages/core/tests/browser/render.spec.ts-snapshots/self-loop-bidirectional-chromium-darwin.png`
   - `packages/core/tests/browser/render.spec.ts-snapshots/stress-mode-suppression-chromium-darwin.png`

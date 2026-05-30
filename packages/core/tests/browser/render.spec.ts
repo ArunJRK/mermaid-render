@@ -3355,8 +3355,10 @@ graph TD
       expect(probe!.warningMessages.some((message) => message.includes('WebGPU device lost'))).toBeTruthy()
       expect(probe!.recoveredBackend === 'WebGL' || probe!.recoveredBackend === 'WebGPU').toBeTruthy()
       expect(probe!.recoveredNodeCount).toBeGreaterThan(0)
+      await expect(page.locator('body')).toHaveScreenshot('webgpu-device-loss-recovery-harness.png')
     } else {
       expect(probe!.error).toContain('WebGPU adapter unavailable')
+      await expect(page.locator('body')).toHaveScreenshot('webgpu-device-loss-adapter-unavailable-harness.png')
     }
     expect(pageErrors).toEqual([])
   })
