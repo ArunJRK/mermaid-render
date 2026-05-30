@@ -74,8 +74,8 @@ For this codebase, the authoritative numbers are the browser harness runs in `pa
 
 | Scenario | Nodes | Edges | Load time | Avg frame | Approx FPS |
 |----------|------:|------:|----------:|----------:|-----------:|
-| Representative graph | 7 | 6 | ~83ms | ~10.9ms | ~92.1 |
-| Stress graph | 220 | 294 | ~276ms | ~9.5ms | ~105.0 |
+| Representative graph | 7 | 6 | ~86ms | ~10.9ms | ~92.1 |
+| Stress graph | 220 | 294 | ~257ms | ~9.5ms | ~105.0 |
 
 Current v1 performance contract:
 
@@ -177,6 +177,12 @@ Current measured outputs:
   - `dist/index.cjs`: ~`205.14 KiB`
 - Demo web app entry chunk:
   - latest `packages/core/dist-demo/assets/index-*.js`: ~`478.18 KiB` minified / `137.46 KiB` gzip
+
+Latest verified current-tree gate:
+
+- unit tests: `142` passed
+- browser tests: `82` passed
+- built static demo smoke: passed
 
 The bundled example `.mmd` files are now lazy-loaded as separate static chunks instead of being inlined into the initial demo entry bundle. That reduced the entry chunk slightly and, more importantly, removed example corpus size from the first-load cost. The remaining large first chunk is now mostly renderer/runtime code rather than raw example content.
 

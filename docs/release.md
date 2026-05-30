@@ -28,8 +28,8 @@ That gate runs:
 
 Latest verified current-tree result:
 
-- unit tests: `141` passed
-- browser tests: `79` passed
+- unit tests: `142` passed
+- browser tests: `82` passed
 - built static demo smoke test: passed
 - core ESM: `202.86 KiB`
 - core CJS: `205.14 KiB`
