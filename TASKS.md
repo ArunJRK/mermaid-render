@@ -4,7 +4,7 @@ Last updated: 2026-05-30, goal-driven pass in progress
 
 ## Current Objective
 
-Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Current focus is the remaining requirement-audit holes, especially the adapter-backed WebGPU recovery path and any final items that still lack strong end-to-end proof.
+Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Current focus is the remaining requirement-audit holes, especially item `44b` (adapter-backed WebGPU device-loss recovery) and any final items that still lack strong end-to-end proof.
 
 ## Latest Resume Notes
 
@@ -51,6 +51,20 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
   - current result: `9` passed
   - it isolates multi-instance behavior, lifecycle misuse errors, synthetic WebGL context recovery, no-adapter WebGPU fallback, visibility/idle ticker behavior, readable fallback states, and the WebGPU device-loss probe path
   - the WebGPU device-loss probe now also keeps a committed harness artifact for its terminal state when no usable adapter exists, instead of relying only on the returned probe object
+  - `goal.md` item `44` is now treated as two parts:
+    - `44a` is the common-path proof surface: synthetic WebGL context loss / restore plus WebGPU-no-adapter fallback
+    - `44b` is the remaining adapter-backed WebGPU device-lost recovery branch
+  - direct environment probe evidence on this machine now shows why only `44b` remains blocked here:
+    - headless Chromium `148.0.7778.96` reports `navigator.gpu === undefined`
+    - that remained true under:
+      - default launch
+      - `--enable-unsafe-webgpu --ignore-gpu-blocklist`
+      - `--enable-unsafe-webgpu --ignore-gpu-blocklist --use-angle=swiftshader-webgpu`
+    - local `Google Chrome.app` `148.0.0.0` launched through Playwright also reported `navigator.gpu === undefined`
+    - that remained true in both:
+      - headless Chrome channel
+      - headed Chrome channel with `--enable-unsafe-webgpu --ignore-gpu-blocklist`
+    - so this environment can close `44a` but still cannot exercise a real adapter-backed WebGPU recovery branch at all; finishing `44b` requires a different browser/runtime environment with an actual exposed WebGPU adapter
 - A focused browser regression now proves stress mode suppresses secondary detail instead of only warning:
   - edge labels are hidden on large stress graphs
   - subgraph chevrons and count badges are hidden on large stress graphs

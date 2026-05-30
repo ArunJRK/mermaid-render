@@ -225,10 +225,15 @@ GOAL: Ship @mermaid-render/core v1.0.0 as a publishable, embeddable WEB renderin
       Probe the adapter or rely on PixiJS's preference-with-fallback AND verify the
       active backend is logged/queryable. Preferring webgpu must never fail where
       webgl would have worked.
-  44. GPU context loss is recoverable. Register webglcontextlost/restored (and the
-      WebGPU device-lost equivalent) handlers. WHEN the context is lost (tab
-      backgrounded long, GPU reset, driver crash): the canvas re-initializes and
-      re-renders on restore instead of going permanently blank.
+  44. GPU context loss is recoverable. Split the proof surface and close both:
+      44a. WebGL context loss / restore and the no-adapter fallback path are
+      recoverable. Register webglcontextlost/restored handlers and verify that
+      WHEN the context is lost (tab backgrounded long, GPU reset, driver crash),
+      the canvas re-initializes and re-renders on restore instead of going
+      permanently blank.
+      44b. On a real adapter-backed WebGPU runtime, the device-lost equivalent is
+      recoverable too. Verify that a true WebGPU device-lost event re-initializes
+      and re-renders instead of leaving the canvas blank.
   45. Documented performance ceiling + graceful degradation. Define the supported
       node/edge count for the 60fps target and what happens past it (the stress
       example from item 8 sets the floor) — no silent frame-rate collapse with no
