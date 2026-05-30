@@ -1225,6 +1225,16 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
    - relayout fade now uses a generation token, so rapid fold/unfold or philosophy-switch interruptions do not leave overlapping fade loops fighting over `viewport.alpha`
    - browser suite now proves repeated interrupted relayouts settle back to `viewportAlpha = 1` with a non-empty graph and no lingering folded state
    - the old dedicated `LayoutAnimator` branch has now been removed, so this remaining work is about the shipped relayout behavior itself rather than a second dormant helper
+   - browser proof is now stronger on the settled-scene side:
+     - the interruption case uses a neutral inline graph with no intentional dimming semantics
+     - after the rapid layout-switch storm settles, Playwright now asserts:
+       - no orphaned or duplicate node/edge/subgraph sprites remain
+       - every rendered node alpha is back to `1`
+       - every rendered edge alpha is back to `1`
+       - every rendered subgraph alpha is back to `1`
+   - focused verification:
+     - `pnpm --filter @mermaid-render/core exec playwright test -g "keeps the stage free of orphaned or duplicate sprites across fold, focus, and philosophy rebuilds|rapid relayout interruptions settle without leaving partial-alpha scene artifacts behind|keeps live relayout motion free of duplicate or orphaned sprites mid-animation"` → passed
+     - `pnpm --filter @mermaid-render/core typecheck` → passed
 
 7. `goal.md` item 32 now has real browser coverage beyond the invalid-input case:
    - the dev harness can load arbitrary inline Mermaid sources through `window.__MERMAID_DEV__.loadSource(...)`

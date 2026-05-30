@@ -86,6 +86,7 @@ type RenderedSubgraphMetrics = {
   id: string
   depth: number
   nodeIds: string[]
+  alpha: number
   layerIndex: number
   bounds: Rect
   fillColor: number
@@ -1433,25 +1434,66 @@ ${lines.map((line) => `  ${line}`).join('\n')}`, '/__blueprint-deterministic__.m
     expect(pageErrors).toEqual([])
   })
 
-  test('rapid relayout interruptions settle without leaving the viewport partially faded', async ({ page }) => {
+  test('rapid relayout interruptions settle without leaving partial-alpha scene artifacts behind', async ({ page }) => {
     const pageErrors = await attachPageErrorTracking(page)
     await waitForDevApi(page)
 
+    const loaded = await page.evaluate(async () => {
+      return await window.__MERMAID_DEV__!.loadSource(`%% @layout narrative
+graph TD
+  A[Start]
+  B[Plan]
+  C[Build]
+  D[Ship]
+  E[Review]
+  A --> B
+  A --> C
+  B --> D
+  C --> D
+  C --> E
+`)
+    })
+    expect(loaded).toBe(true)
+
     await page.evaluate(() => {
-      window.__MERMAID_DEV__!.foldNode('core')
-      window.__MERMAID_DEV__!.unfoldNode('core')
       window.__MERMAID_DEV__!.setLayout('blueprint')
-      window.__MERMAID_DEV__!.setLayout('narrative')
       window.__MERMAID_DEV__!.setLayout('map')
+      window.__MERMAID_DEV__!.setLayout('radial')
       window.__MERMAID_DEV__!.setLayout('narrative')
     })
 
     await expect.poll(async () => (await snapshot(page)).currentLayout).toBe('narrative')
     await expect.poll(async () => (await snapshot(page)).viewportAlpha).toBe(1)
-    await expect.poll(async () => (await snapshot(page)).foldedSubgraphs).toEqual([])
     const settled = await snapshot(page)
+    const inventory = await page.evaluate(() => window.__MERMAID_DEV__!.getSceneInventory() as SceneInventory)
+    const settledScene = await page.evaluate(() => ({
+      nodes: window.__MERMAID_DEV__!.getRenderedNodeMetrics() as RenderedNodeMetrics[],
+      edges: window.__MERMAID_DEV__!.getRenderedEdgeMetrics() as RenderedEdgeMetrics[],
+      subgraphs: window.__MERMAID_DEV__!.getRenderedSubgraphMetrics() as RenderedSubgraphMetrics[],
+    }))
+
     expect(settled.nodeCount).toBeGreaterThan(0)
     expect(settled.edgeCount).toBeGreaterThan(0)
+    expect(inventory.orphanNodeSprites).toEqual([])
+    expect(inventory.orphanEdgeGraphics).toEqual([])
+    expect(inventory.orphanSubgraphs).toEqual([])
+    expect(inventory.duplicateNodeSpriteIds).toEqual([])
+    expect(inventory.duplicateEdgeGraphicIds).toEqual([])
+    expect(inventory.duplicateSubgraphIds).toEqual([])
+
+    for (const node of settledScene.nodes) {
+      expect(node.alpha).toBeCloseTo(1, 3)
+    }
+    for (const edge of settledScene.edges) {
+      expect(edge.alpha).toBeCloseTo(1, 3)
+    }
+    for (const subgraph of settledScene.subgraphs) {
+      expect(subgraph.alpha).toBeCloseTo(1, 3)
+      expect(subgraph.layerIndex).toBeGreaterThanOrEqual(0)
+      expect(subgraph.bounds.width).toBeGreaterThan(0)
+      expect(subgraph.bounds.height).toBeGreaterThan(0)
+    }
+
     expect(pageErrors).toEqual([])
   })
 

@@ -100,6 +100,7 @@ type RenderedSubgraphMetrics = {
   id: string
   depth: number
   nodeIds: string[]
+  alpha: number
   layerIndex: number
   bounds: Rect
   fillColor: number
@@ -1178,6 +1179,7 @@ function getRenderedSubgraphMetrics(): RenderedSubgraphMetrics[] {
   return Array.from(subgraphs.entries()).map(([id, subgraph]) => ({
     id,
     nodeIds: [...(subgraph.data?.nodeIds ?? [])],
+    alpha: (subgraph as any).alpha ?? 1,
     layerIndex: (subgraph as any).parent?.getChildIndex(subgraph as any) ?? -1,
     bounds: (() => {
       const bounds = subgraph.getBounds()
