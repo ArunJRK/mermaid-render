@@ -48,6 +48,9 @@ GitHub Actions PR / mainline gate:
   - trigger: push to `main`
   - result: `success`
 - nuance: this proves the real CI workflow and command are green on the current tree, but it is not yet a fresh `pull_request`-triggered run on the same SHA, so `goal.md` item `12` still has a small PR-shaped evidence gap
+- release-audit closeout should keep both artifacts when possible:
+  - one green `pull_request` run on the candidate branch
+  - one green post-merge `push` run on `main`
 
 ## Dry-Run the npm Package
 
