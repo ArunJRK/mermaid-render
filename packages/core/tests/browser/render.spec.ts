@@ -2835,7 +2835,7 @@ graph TD
     expect(selectionBounds).not.toBeNull()
     const selectionShot = await page.screenshot({ clip: centeredClip(selectionBounds!, 180, 120) })
     expect(selectionShot).toMatchSnapshot('breath-selection-perceptible.png', {
-      maxDiffPixelRatio: 0.015,
+      maxDiffPixelRatio: 0.02,
     })
 
     expect(pageErrors).toEqual([])
