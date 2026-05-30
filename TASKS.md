@@ -109,6 +109,19 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
     - documented plain-page embed mounting
     - readable invalid-input and unsupported-diagram failure states
     - built static demo artifact rendering and navigation
+- The performance and stress-degradation surface now also has a first-class rerun path:
+  - `pnpm --filter @mermaid-render/core test:performance`
+  - current result:
+    - performance/stress browser slice: `5` passed
+  - latest focused run measurements:
+    - representative: `7` nodes / `6` edges, `loadMs ≈ 97.6`, `avgFrameMs ≈ 11.41`, `p95FrameMs ≈ 8.5`, `approxFps ≈ 87.62`
+    - stress: `220` nodes / `294` edges, `loadMs ≈ 297.2`, `avgFrameMs ≈ 9.87`, `p95FrameMs ≈ 25.0`, `approxFps ≈ 101.27`
+  - this gives `goal.md` items `8` and `45` one concrete verification command for:
+    - browser-side representative and stress perf sampling
+    - explicit stress-mode activation
+    - current stress-mode detail suppression
+    - current stress-mode preview suppression
+    - stress-mode relayout fast path
     - that remained true under:
       - default launch
       - `--enable-unsafe-webgpu --ignore-gpu-blocklist`

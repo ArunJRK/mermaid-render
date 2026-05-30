@@ -285,6 +285,27 @@ Current result on the present tree:
 - browser integration/embed slice: `8` passed
 - built static demo smoke: `1` passed
 
+There is also a focused browser gate for performance and stress-mode behavior:
+
+```bash
+pnpm --filter @mermaid-render/core test:performance
+```
+
+That command covers:
+
+- representative and stress browser-side perf sampling
+- explicit stress-mode activation on large graphs
+- current stress-mode detail suppression
+- stress-mode cross-file preview suppression
+- stress-mode relayout fast path
+
+Current result on the present tree:
+
+- performance/stress browser slice: `5` passed
+- latest focused run measurements:
+  - representative: `7` nodes / `6` edges, `loadMs ≈ 97.6`, `avgFrameMs ≈ 11.41`, `p95FrameMs ≈ 8.5`, `approxFps ≈ 87.62`
+  - stress: `220` nodes / `294` edges, `loadMs ≈ 297.2`, `avgFrameMs ≈ 9.87`, `p95FrameMs ≈ 25.0`, `approxFps ≈ 101.27`
+
 Current environment expectation:
 
 - in ordinary CI or headless Chromium without a usable WebGPU adapter, the WebGPU probe should finish quickly with an explicit adapter-unavailable result instead of hanging
