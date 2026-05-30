@@ -91,6 +91,11 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
     - parser/resolver unit slice: `20` passed
     - linking/preview browser slice: `16` passed
   - this gives `goal.md` items `33` through `40` one concrete verification command instead of scattering the proof across parser unit tests and many browser `-g` runs
+- The render-quality and viewport slice now also has a first-class rerun path:
+  - `pnpm --filter @mermaid-render/core test:render-quality`
+  - current result:
+    - browser slice: `22` passed
+  - this gives `goal.md` items `13` through `32` one concrete verification command for the geometry, routing, fit/zoom, layering, containment, and degenerate-rendering invariants instead of scattering the proof across many browser `-g` runs
     - that remained true under:
       - default launch
       - `--enable-unsafe-webgpu --ignore-gpu-blocklist`

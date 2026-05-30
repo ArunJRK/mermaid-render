@@ -178,6 +178,8 @@ That focused run covers:
 
 Current result on the present tree:
 
+- render-quality browser slice: `22` passed
+
 - `pnpm --filter @mermaid-render/core test:browser:relayout` -> `9` passed
 
 There is also a focused mixed unit + browser gate for the spring/runtime animation contract:
@@ -239,6 +241,27 @@ Current result on the present tree:
 
 - parser/resolver unit slice: `20` passed
 - linking/preview browser slice: `16` passed
+
+There is also a focused browser gate for the render-quality and viewport contract:
+
+```bash
+pnpm --filter @mermaid-render/core test:render-quality
+```
+
+That command covers:
+
+- node overlap and low-zoom label overlap invariants
+- non-rectangular and long-label node fit
+- hover bounds, edge trimming, edge-label clearance, self-loop/bidirectional rendering
+- Blueprint rendered-footprint routing, deterministic ordering, and fallback-wire behavior
+- fit-to-view, resize, recovery, and zoom clamp behavior
+- responsive narrow-layout behavior
+- paint order and stage layering
+- subgraph containment and degenerate-graph stability
+
+Current result on the present tree:
+
+- render-quality browser slice: `22` passed
 
 Current environment expectation:
 
