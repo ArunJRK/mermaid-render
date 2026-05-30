@@ -96,6 +96,19 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
   - current result:
     - browser slice: `22` passed
   - this gives `goal.md` items `13` through `32` one concrete verification command for the geometry, routing, fit/zoom, layering, containment, and degenerate-rendering invariants instead of scattering the proof across many browser `-g` runs
+- The browser integration, embed, and static-demo surface now also has a first-class rerun path:
+  - `pnpm --filter @mermaid-render/core test:web`
+  - current result:
+    - browser integration/embed slice: `8` passed
+    - built static demo smoke: `1` passed
+  - this gives `goal.md` items `1` and `3` through `6` one concrete verification command for:
+    - example load -> layout -> render on the real Pixi path
+    - fold/unfold and focus navigation behavior
+    - philosophy-switch fold-state preservation
+    - fit-to-view sanity after reload
+    - documented plain-page embed mounting
+    - readable invalid-input and unsupported-diagram failure states
+    - built static demo artifact rendering and navigation
     - that remained true under:
       - default launch
       - `--enable-unsafe-webgpu --ignore-gpu-blocklist`

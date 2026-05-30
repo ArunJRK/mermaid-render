@@ -263,6 +263,28 @@ Current result on the present tree:
 
 - render-quality browser slice: `22` passed
 
+There is also a focused browser + built-artifact gate for the web/demo surface:
+
+```bash
+pnpm --filter @mermaid-render/core test:web
+```
+
+That command covers:
+
+- real browser load -> layout -> render on shipped examples and the stress graph
+- fold/unfold behavior
+- focus navigation
+- fold-state preservation across philosophy switches
+- fit-to-view sanity after reload
+- documented plain-page embed mounting
+- readable invalid-input and unsupported-diagram error states
+- built static demo artifact rendering and navigation
+
+Current result on the present tree:
+
+- browser integration/embed slice: `8` passed
+- built static demo smoke: `1` passed
+
 Current environment expectation:
 
 - in ordinary CI or headless Chromium without a usable WebGPU adapter, the WebGPU probe should finish quickly with an explicit adapter-unavailable result instead of hanging
