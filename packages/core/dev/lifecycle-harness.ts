@@ -23,6 +23,11 @@ type ContextRecoveryResult = {
   contextRestoredDispatched: boolean
 }
 
+type ContextRecoveryVisualResult = ContextRecoveryResult & {
+  canvasId: string
+  screenshotBase64: string
+}
+
 type VisibilityPauseResult = {
   initiallyRunning: boolean
   hiddenRunning: boolean
@@ -64,6 +69,7 @@ declare global {
       runMultiInstanceProbe(): Promise<LifecycleHarnessResult>
       runLifecycleMisuseProbe(): Promise<LifecycleMisuseResult>
       runContextRecovery(): Promise<ContextRecoveryResult>
+      runContextRecoveryVisualProbe(): Promise<ContextRecoveryVisualResult>
       runVisibilityPauseProbe(): Promise<VisibilityPauseResult>
       runIdlePauseProbe(): Promise<IdlePauseResult>
       runAdapterFallbackProbe(): Promise<AdapterFallbackResult>
@@ -277,6 +283,77 @@ window.__LIFECYCLE_HARNESS__ = {
       if (originalGpuDescriptor) {
         Object.defineProperty(navigator, 'gpu', originalGpuDescriptor)
       }
+    }
+  },
+  async runContextRecoveryVisualProbe(): Promise<ContextRecoveryVisualResult> {
+    const originalGpuDescriptor = Object.getOwnPropertyDescriptor(navigator, 'gpu')
+    try {
+      Object.defineProperty(navigator, 'gpu', {
+        configurable: true,
+        value: undefined,
+      })
+    } catch {
+      // ignore if the browser does not let us override this property
+    }
+
+    const canvasA = document.getElementById('canvas-a') as HTMLCanvasElement
+    const renderer = new MermaidRenderer()
+    const source = `graph TD
+      A[Start] --> B[Done]`
+
+    try {
+      await withTimeout(renderer.mount(canvasA), 'recovery visual mount')
+      await withTimeout(renderer.load(source), 'recovery visual load')
+      const initialNodeCount = (renderer as any)._nodeSprites.size
+
+      const lostEvent = new Event('webglcontextlost', { cancelable: true })
+      const restoredEvent = new Event('webglcontextrestored')
+      canvasA.dispatchEvent(lostEvent)
+      const contextLossPrevented = lostEvent.defaultPrevented
+      const contextRestoredDispatched = canvasA.dispatchEvent(restoredEvent)
+
+      const recoveredNodeCount = await withTimeout(
+        new Promise<number>((resolve, reject) => {
+          const started = performance.now()
+          const tick = () => {
+            const nodeCount = (renderer as any)._nodeSprites.size as number
+            if (nodeCount > 0) {
+              resolve(nodeCount)
+              return
+            }
+            if (performance.now() - started > 5000) {
+              reject(new Error('context recovery timed out'))
+              return
+            }
+            window.setTimeout(tick, 50)
+          }
+          tick()
+        }),
+        'context recovery visual',
+      )
+
+      const screenshotBase64 = canvasA.toDataURL('image/png').split(',')[1]
+
+      const result = {
+        initialNodeCount,
+        recoveredNodeCount,
+        contextLossPrevented,
+        contextRestoredDispatched,
+        canvasId: 'canvas-a',
+        screenshotBase64,
+      }
+      setStatus(JSON.stringify(result, null, 2))
+      renderer.destroy()
+      if (originalGpuDescriptor) {
+        Object.defineProperty(navigator, 'gpu', originalGpuDescriptor)
+      }
+      return result
+    } catch (error) {
+      renderer.destroy()
+      if (originalGpuDescriptor) {
+        Object.defineProperty(navigator, 'gpu', originalGpuDescriptor)
+      }
+      throw error
     }
   },
   async runVisibilityPauseProbe(): Promise<VisibilityPauseResult> {

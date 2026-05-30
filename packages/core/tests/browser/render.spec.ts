@@ -120,6 +120,11 @@ type ContextRecoveryProbe = {
   contextRestoredDispatched: boolean
 }
 
+type ContextRecoveryVisualProbe = ContextRecoveryProbe & {
+  canvasId: string
+  screenshotBase64: string
+}
+
 type BackendUnavailableProbe = {
   mountError: string | null
   sampledAlphaSum: number
@@ -3100,6 +3105,25 @@ graph TD
     expect(probe.contextLossPrevented).toBeTruthy()
     expect(probe.contextRestoredDispatched).toBeTruthy()
     expect(probe.recoveredNodeCount).toBeGreaterThan(0)
+    expect(pageErrors).toEqual([])
+  })
+
+  test('renders visibly after synthetic WebGL context loss recovery', async ({ page }) => {
+    const pageErrors = await attachPageErrorTracking(page)
+    await page.goto('/lifecycle-harness.html')
+    await page.waitForFunction(() => Boolean((window as any).__LIFECYCLE_HARNESS__))
+
+    const probe = await page.evaluate(async (): Promise<ContextRecoveryVisualProbe> => {
+      return await (window as any).__LIFECYCLE_HARNESS__.runContextRecoveryVisualProbe()
+    })
+
+    expect(probe.initialNodeCount).toBeGreaterThan(0)
+    expect(probe.contextLossPrevented).toBeTruthy()
+    expect(probe.contextRestoredDispatched).toBeTruthy()
+    expect(probe.recoveredNodeCount).toBeGreaterThan(0)
+    expect(probe.screenshotBase64.length).toBeGreaterThan(0)
+    expect(Buffer.from(probe.screenshotBase64, 'base64')).toMatchSnapshot('webgl-context-recovery-restored.png')
+
     expect(pageErrors).toEqual([])
   })
 

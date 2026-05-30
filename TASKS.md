@@ -65,6 +65,11 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
       - headless Chrome channel
       - headed Chrome channel with `--enable-unsafe-webgpu --ignore-gpu-blocklist`
     - so this environment can close `44a` but still cannot exercise a real adapter-backed WebGPU recovery branch at all; finishing `44b` requires a different browser/runtime environment with an actual exposed WebGPU adapter
+  - `goal.md` item `44a` now has direct visual recovery evidence in addition to lifecycle assertions:
+    - the lifecycle harness exposes a retained synthetic WebGL-loss probe that captures the recovered canvas pixels before cleanup
+    - browser suite now proves the recovered scene is visibly rendered after `webglcontextlost` / `webglcontextrestored`, not only that node counts repopulate
+    - committed baseline:
+      - `packages/core/tests/browser/render.spec.ts-snapshots/webgl-context-recovery-restored-chromium-darwin.png`
 - A focused browser regression now proves stress mode suppresses secondary detail instead of only warning:
   - edge labels are hidden on large stress graphs
   - subgraph chevrons and count badges are hidden on large stress graphs
