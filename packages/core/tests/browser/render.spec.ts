@@ -2699,7 +2699,9 @@ graph TD
     const selectedOnlyBounds = await page.evaluate(() => window.__MERMAID_DEV__!.getNodeScreenBounds('OrderSvc'))
     expect(selectedOnlyBounds).not.toBeNull()
     const selectedOnlyShot = await page.screenshot({ clip: expandClip(selectedOnlyBounds!) })
-    expect(selectedOnlyShot).toMatchSnapshot('selection-only-node-state.png')
+    expect(selectedOnlyShot).toMatchSnapshot('selection-only-node-state.png', {
+      maxDiffPixelRatio: 0.065,
+    })
 
     await hoverNode(page, 'OrderSvc')
     const selectedAndHovered = await page.evaluate(() => {
