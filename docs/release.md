@@ -197,6 +197,26 @@ Current result on the present tree:
 - spring + animation-clock unit slice: `12` passed
 - relayout browser slice: `9` passed
 
+There is also a focused mixed unit + browser gate for the theme and emphasis contract:
+
+```bash
+pnpm --filter @mermaid-render/core test:theme
+```
+
+That command covers:
+
+- theme contrast floor
+- theme emphasis perceptibility math
+- theme depth-tint availability
+- renderer hardcoded-color fence
+- light-theme resolution
+- browser theme/emphasis states across light mode, depth tints, hover/selection distinction, relationship emphasis, broken-link distinction, and overlap z-order
+
+Current result on the present tree:
+
+- theme unit slice: `7` passed
+- theme/emphasis browser slice: `10` passed
+
 Current environment expectation:
 
 - in ordinary CI or headless Chromium without a usable WebGPU adapter, the WebGPU probe should finish quickly with an explicit adapter-unavailable result instead of hanging

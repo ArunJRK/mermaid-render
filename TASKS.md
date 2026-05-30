@@ -79,6 +79,12 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
     - spring + animation-clock unit slice: `12` passed
     - relayout browser slice: `9` passed
   - this gives `goal.md` items `47` through `50` one concrete verification command instead of splitting the proof across ad hoc vitest and Playwright invocations
+- The theme/emphasis slice now also has a first-class rerun path:
+  - `pnpm --filter @mermaid-render/core test:theme`
+  - current result:
+    - theme unit slice: `7` passed
+    - theme/emphasis browser slice: `10` passed
+  - this gives `goal.md` items `55` through `64` one concrete verification command instead of scattering the proof across several unit files and many browser `-g` runs
     - that remained true under:
       - default launch
       - `--enable-unsafe-webgpu --ignore-gpu-blocklist`
