@@ -1,3 +1,5 @@
+import { estimateRenderedNodeFootprint } from '../node-footprint'
+
 /** Wire-to-component clearance (Cc). Used to inflate obstacles. */
 export const COMPONENT_CLEARANCE = 8
 
@@ -99,12 +101,23 @@ export class WireRegistry {
   }
 
   /** Also check against node bounding boxes — a lane through a node is blocked */
-  registerNodeObstacles(nodes: Map<string, { x: number; y: number; width: number; height: number }>, excludeIds?: Set<string>): void {
+  registerNodeObstacles(
+    nodes: Map<string, { x: number; y: number; width: number; height: number; label?: string }>,
+    excludeIds?: Set<string>,
+    monospace: boolean = false,
+  ): void {
     for (const [id, node] of nodes) {
       if (excludeIds?.has(id)) continue
+      const footprint = node.label
+        ? estimateRenderedNodeFootprint({
+          label: node.label,
+          width: node.width,
+          height: node.height,
+        }, monospace)
+        : { width: node.width, height: node.height }
       // Block all vertical lanes that pass through this node
-      const hw = node.width / 2 + COMPONENT_CLEARANCE
-      const hh = node.height / 2 + COMPONENT_CLEARANCE
+      const hw = footprint.width / 2 + COMPONENT_CLEARANCE
+      const hh = footprint.height / 2 + COMPONENT_CLEARANCE
       const minX = this._snap(node.x - hw)
       const maxX = this._snap(node.x + hw)
       for (let x = minX; x <= maxX; x += this._gridSize) {

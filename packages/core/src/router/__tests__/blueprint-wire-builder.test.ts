@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { BlueprintWireBuilder } from '../blueprint-wire-builder'
 import type { PositionedGraph, PositionedNode, PositionedEdge } from '../../types'
 
@@ -62,5 +62,48 @@ describe('BlueprintWireBuilder', () => {
     const builder = new BlueprintWireBuilder(graph)
     const result = builder.route()
     expect(result.wires).toHaveLength(0)
+  })
+
+  it('falls back to a visible direct route instead of dropping an edge when A* fails', () => {
+    const graph = makeGraph(
+      [['A', 100, 40, 80, 40], ['B', 100, 200, 80, 40]],
+      [['e1', 'A', 'B']],
+    )
+    const builder = new BlueprintWireBuilder(graph)
+    vi.spyOn(builder as any, '_routeAstar').mockReturnValueOnce(null)
+
+    const result = builder.route()
+
+    expect(result.congested).toBe(true)
+    expect(result.wires).toHaveLength(1)
+    expect(result.wires[0].edgeId).toBe('e1')
+    expect(result.wires[0].segments.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('routes in a deterministic order independent of input edge order', () => {
+    const nodes: Array<[string, number, number, number, number]> = [
+      ['A', 100, 40, 80, 40],
+      ['B', 60, 200, 80, 40],
+      ['C', 200, 200, 80, 40],
+      ['D', 320, 200, 80, 40],
+    ]
+
+    const forward = makeGraph(nodes, [
+      ['e3', 'A', 'D'],
+      ['e1', 'A', 'B'],
+      ['e2', 'A', 'C'],
+    ])
+    const reversed = makeGraph(nodes, [
+      ['e2', 'A', 'C'],
+      ['e1', 'A', 'B'],
+      ['e3', 'A', 'D'],
+    ])
+
+    const forwardResult = new BlueprintWireBuilder(forward).route()
+    const reversedResult = new BlueprintWireBuilder(reversed).route()
+
+    expect(forwardResult.wires.map((wire) => wire.edgeId)).toEqual(['e1', 'e2', 'e3'])
+    expect(reversedResult.wires.map((wire) => wire.edgeId)).toEqual(['e1', 'e2', 'e3'])
+    expect(reversedResult.wires).toEqual(forwardResult.wires)
   })
 })

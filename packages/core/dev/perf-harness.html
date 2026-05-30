@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>mermaid-render perf harness</title>
+  <style>
+    html, body { margin: 0; padding: 0; background: #111827; color: #e5e7eb; font-family: Inter, system-ui, sans-serif; }
+    body { padding: 16px; }
+    canvas { display: block; width: 100%; height: 640px; background: #111827; border: 1px solid #374151; border-radius: 8px; }
+    pre { margin: 0 0 12px; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <pre id="status">idle</pre>
+  <canvas id="canvas" width="1280" height="640"></canvas>
+  <script type="module" src="./perf-harness.ts"></script>
+</body>
+</html>

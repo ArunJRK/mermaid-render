@@ -1,6 +1,6 @@
 {
   "name": "@mermaid-render/core",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Interactive Mermaid diagram rendering engine",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -13,16 +13,28 @@
       "require": "./dist/index.cjs"
     }
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "files": [
     "dist"
   ],
   "scripts": {
     "build": "tsup",
+    "build:demo": "vite build --emptyOutDir --outDir ../dist-demo",
     "test": "vitest run",
+    "test:browser": "playwright test",
+    "test:browser:lifecycle": "playwright test -g \"supports multiple live renderers on one page|guards lifecycle misuse with clear errors|recovers after synthetic WebGL context loss|falls back to WebGL when the WebGPU API exists but no adapter is available|pauses and resumes the ticker on visibility changes|stops the ticker after idle and restarts on pointer activity|shows a readable fallback state when renderer initialization fails|shows a readable fallback state when no usable GPU backend is available|recovers from WebGPU device loss when available, or reports adapter constraints without hanging\"",
+    "test:browser:static-demo": "pnpm build:demo && playwright test -c playwright.static.config.ts",
     "test:watch": "vitest",
     "dev": "vite dev",
-    "lint": "eslint src",
-    "typecheck": "tsc --noEmit"
+    "preview:demo": "pnpm build:demo && node ./scripts/serve-static-demo.mjs --port 4173",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "bundle:check": "node ./scripts/check-bundle-budget.mjs",
+    "pack:check": "npm pack --dry-run",
+    "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm test:browser && pnpm build && pnpm build:demo && pnpm test:browser:static-demo && pnpm bundle:check && pnpm pack:check",
+    "prepack": "pnpm build"
   },
   "dependencies": {
     "@dagrejs/dagre": "^1.1.4",
@@ -30,9 +42,14 @@
     "pixi.js": "^8.6.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "@playwright/test": "^1.60.0",
+    "eslint": "^9.39.4",
+    "globals": "^16.5.0",
     "jsdom": "^25.0.0",
     "tsup": "^8.3.0",
     "typescript": "^5.7.0",
+    "typescript-eslint": "^8.60.0",
     "vite": "^8.0.3",
     "vitest": "^3.0.0"
   },

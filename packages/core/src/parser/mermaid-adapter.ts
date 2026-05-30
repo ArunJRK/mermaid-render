@@ -1,14 +1,33 @@
-import mermaid from 'mermaid'
 import type { DiagramType } from '../types'
+
+type MermaidModule = {
+  default: {
+    initialize(config: { startOnLoad: boolean }): void
+    mermaidAPI: {
+      getDiagramFromText(source: string): Promise<{ type: string; db: any }>
+    }
+  }
+}
+
+let mermaidModulePromise: Promise<MermaidModule['default']> | null = null
+
+async function getMermaid() {
+  if (!mermaidModulePromise) {
+    mermaidModulePromise = import('mermaid').then((module) => module.default)
+  }
+  return await mermaidModulePromise
+}
 
 // Ensure mermaid is initialized once
 let initialized = false
 
-function ensureInitialized(): void {
+async function ensureInitialized() {
+  const mermaid = await getMermaid()
   if (!initialized) {
     mermaid.initialize({ startOnLoad: false })
     initialized = true
   }
+  return mermaid
 }
 
 export interface MermaidParseResult {
@@ -33,10 +52,10 @@ function mapDiagramType(mermaidType: string): DiagramType {
  * vertices/edges/subgraphs), and direction.
  */
 export async function parseMermaid(source: string): Promise<MermaidParseResult> {
-  ensureInitialized()
+  const mermaid = await ensureInitialized()
 
   // Access mermaidAPI.getDiagramFromText to get the full Diagram object
-  const api = (mermaid as any).mermaidAPI
+  const api = mermaid.mermaidAPI
   const diagram = await api.getDiagramFromText(source)
 
   const diagramType = mapDiagramType(diagram.type)

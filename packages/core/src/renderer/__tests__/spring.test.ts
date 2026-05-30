@@ -99,4 +99,35 @@ describe('Spring', () => {
     simulate(stiff, 0.3)
     expect(Math.abs(stiff.value - 100)).toBeLessThan(Math.abs(soft.value - 100))
   })
+
+  it('rejects non-finite constructor and target values', () => {
+    expect(() => new Spring(Number.NaN)).toThrow('Spring initial must be finite')
+
+    const spring = new Spring(0)
+    expect(() => spring.setTarget(Number.POSITIVE_INFINITY)).toThrow('Spring target must be finite')
+    expect(() => spring.setImmediate(Number.NaN)).toThrow('Spring value must be finite')
+  })
+
+  it('snaps to target after max duration instead of running forever', () => {
+    const spring = new Spring(0, { stiffness: 0.0001, damping: 0, maxDuration: 0.2 })
+    spring.setTarget(100)
+
+    simulate(spring, 1)
+
+    expect(spring.value).toBe(100)
+    expect(spring.target).toBe(100)
+    expect(spring.velocity).toBe(0)
+    expect(spring.isSettled).toBe(true)
+  })
+
+  it('snaps back to target when integration would become non-finite', () => {
+    const spring = new Spring(0, { stiffness: Number.MAX_VALUE, damping: 0, maxDuration: 4 })
+    spring.setTarget(1)
+
+    spring.tick(1 / 60)
+
+    expect(spring.value).toBe(1)
+    expect(spring.velocity).toBe(0)
+    expect(spring.isSettled).toBe(true)
+  })
 })

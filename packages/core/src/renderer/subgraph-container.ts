@@ -1,12 +1,12 @@
 import { Container, Graphics, BitmapText } from 'pixi.js'
 import type { PositionedSubgraph } from '../types'
 import { ensureFontsInstalled } from './fonts'
-import type { Theme } from './theme'
+import { getSubgraphDepthFill, type Theme } from './theme'
 
 const LABEL_PADDING = 10
 
 export class SubgraphContainer extends Container {
-  readonly data: PositionedSubgraph
+  data: PositionedSubgraph
   private _bg: Graphics
   private _label: BitmapText
   private _chevron: BitmapText
@@ -14,13 +14,16 @@ export class SubgraphContainer extends Container {
   private _theme: Theme
   private _depth: number
   private _collapsed: boolean
+  private _stressMode = false
+  private _fontName: string
 
-  constructor(subgraph: PositionedSubgraph, theme: Theme, depth: number = 0) {
+  constructor(subgraph: PositionedSubgraph, theme: Theme, depth: number = 0, fontName = 'MermaidLabel') {
     super()
     this.data = subgraph
     this._theme = theme
     this._depth = depth
     this._collapsed = subgraph.collapsed
+    this._fontName = fontName
 
     this.x = subgraph.x
     this.y = subgraph.y
@@ -37,7 +40,7 @@ export class SubgraphContainer extends Container {
     ensureFontsInstalled()
     this._label = new BitmapText({
       text: subgraph.label,
-      style: { fontFamily: 'MermaidLabel', fontSize: 12 },
+      style: { fontFamily: fontName, fontSize: 12, fill: theme.subgraphLabel },
     })
     this._label.x = -hw + LABEL_PADDING + 16 // leave room for chevron
     this._label.y = -hh + LABEL_PADDING
@@ -46,7 +49,7 @@ export class SubgraphContainer extends Container {
     // Chevron indicator (fold state)
     this._chevron = new BitmapText({
       text: subgraph.collapsed ? '\u25B6' : '\u25BC', // right-pointing or down-pointing triangle
-      style: { fontFamily: 'MermaidLabel', fontSize: 12 },
+      style: { fontFamily: fontName, fontSize: 12, fill: theme.subgraphLabel },
     })
     this._chevron.x = -hw + LABEL_PADDING
     this._chevron.y = -hh + LABEL_PADDING
@@ -57,7 +60,7 @@ export class SubgraphContainer extends Container {
     if (nodeCount > 0) {
       this._badge = new BitmapText({
         text: String(nodeCount),
-        style: { fontFamily: 'MermaidLabel', fontSize: 10 },
+        style: { fontFamily: fontName, fontSize: 10, fill: theme.subgraphLabel },
       })
       this._badge.anchor.set(1, 0)
       this._badge.x = hw - LABEL_PADDING
@@ -89,6 +92,63 @@ export class SubgraphContainer extends Container {
     })
   }
 
+  updateLayout(subgraph: PositionedSubgraph, depth: number = this._depth, theme: Theme = this._theme, fontName: string = this._fontName): void {
+    this.data = subgraph
+    this._theme = theme
+    this._depth = depth
+    this._collapsed = subgraph.collapsed
+    this._fontName = fontName
+    this.x = subgraph.x
+    this.y = subgraph.y
+
+    const hw = subgraph.width / 2
+    const hh = subgraph.height / 2
+
+    this._bg.clear()
+    this._drawBg(hw, hh, false)
+
+    this._label.text = subgraph.label
+    this._label.style.fontFamily = fontName
+    this._label.style.fill = theme.subgraphLabel
+    this._label.x = -hw + LABEL_PADDING + 16
+    this._label.y = -hh + LABEL_PADDING
+
+    this._chevron.text = subgraph.collapsed ? '\u25B6' : '\u25BC'
+    this._chevron.style.fontFamily = fontName
+    this._chevron.style.fill = theme.subgraphLabel
+    this._chevron.x = -hw + LABEL_PADDING
+    this._chevron.y = -hh + LABEL_PADDING
+
+    const nodeCount = subgraph.nodeIds.length
+    if (nodeCount > 0) {
+      if (!this._badge) {
+        this._badge = new BitmapText({
+          text: String(nodeCount),
+          style: { fontFamily: fontName, fontSize: 10, fill: theme.subgraphLabel },
+        })
+        this._badge.anchor.set(1, 0)
+        this.addChild(this._badge)
+      }
+      this._badge.text = String(nodeCount)
+      this._badge.style.fontFamily = fontName
+      this._badge.style.fill = theme.subgraphLabel
+      this._badge.x = hw - LABEL_PADDING
+      this._badge.y = -hh + LABEL_PADDING
+    } else if (this._badge) {
+      this._badge.removeFromParent()
+      this._badge.destroy()
+      this._badge = null
+    }
+
+    this.hitArea = {
+      contains: (x: number, y: number) => {
+        const inOuter = x >= -hw && x <= hw && y >= -hh && y <= hh
+        const inInner = x >= -hw + 15 && x <= hw - 15 && y >= -hh + 30 && y <= hh - 15
+        return inOuter && !inInner
+      },
+    }
+  }
+
   /**
    * Update the fold indicator to reflect collapsed/expanded state.
    */
@@ -109,8 +169,36 @@ export class SubgraphContainer extends Container {
     // Labels and indicators always visible at default zoom and above
     this._label.visible = true
     this._label.alpha = zoom < 0.4 ? 0.5 : 1
-    this._chevron.visible = zoom >= 0.5
-    if (this._badge) this._badge.visible = zoom >= 0.5
+    this._chevron.visible = !this._stressMode && zoom >= 0.5
+    if (this._badge) this._badge.visible = !this._stressMode && zoom >= 0.5
+  }
+
+  setStressMode(stressMode: boolean): void {
+    this._stressMode = stressMode
+    if (stressMode) {
+      this._chevron.visible = false
+      if (this._badge) this._badge.visible = false
+    }
+  }
+
+  getDebugStyle(): {
+    depth: number
+    fillColor: number
+    labelFill: number
+    labelFontFamily: string
+    accent: number
+    chevronVisible: boolean
+    badgeVisible: boolean
+  } {
+    return {
+      depth: this._depth,
+      fillColor: getSubgraphDepthFill(this._theme, this._depth),
+      labelFill: this._theme.subgraphLabel,
+      labelFontFamily: this._fontName,
+      accent: this._theme.accent,
+      chevronVisible: this._chevron.visible,
+      badgeVisible: this._badge?.visible ?? false,
+    }
   }
 
   private _drawBg(hw: number, hh: number, hovered: boolean): void {
@@ -120,11 +208,7 @@ export class SubgraphContainer extends Container {
     const d = this._depth
 
     // Determine fill color — Map philosophy uses depth tints
-    let fillColor = t.subgraphFill
-    if (t.subgraphDepthTints && t.subgraphDepthTints.length > 0) {
-      const tints = t.subgraphDepthTints
-      fillColor = tints[Math.min(d, tints.length - 1)]
-    }
+    const fillColor = getSubgraphDepthFill(t, d)
 
     // Deeper nesting = slightly higher fill opacity + thicker border
     const fillAlpha = t.subgraphFillAlpha + d * 0.08

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { NarrativeLayout, type Lane } from '../narrative-layout'
+import { NarrativeLayout } from '../narrative-layout'
 import type { RenderGraph, RenderNode, RenderEdge } from '../../types'
 
 /** Helper: build a RenderGraph from a compact description. */

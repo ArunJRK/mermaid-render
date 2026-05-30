@@ -1,4 +1,4 @@
-import type { LayoutPhilosophy } from '../types'
+import type { LayoutPhilosophy, ThemeMode, ThemeOverrides } from '../types'
 
 export interface Theme {
   name: string
@@ -6,6 +6,7 @@ export interface Theme {
   nodeFill: number
   nodeStroke: number
   nodeStrokeSelected: number
+  brokenLinkAccent: number
   nodeText: number
   edgeColor: number
   edgeLabelColor: number
@@ -27,10 +28,20 @@ export interface Theme {
   cornerRadius: number
   /** Dimmed opacity for unfocused elements */
   dimmedAlpha: number
+  messageOverlayBg: number
+  messageTitle: string
+  messageBody: string
   /** Breadcrumb bar styling */
   breadcrumbBg: string
   breadcrumbText: string
   breadcrumbAccent: string
+}
+
+export function getSubgraphDepthFill(theme: Theme, depth: number): number {
+  if (theme.subgraphDepthTints && theme.subgraphDepthTints.length > 0) {
+    return theme.subgraphDepthTints[Math.min(depth, theme.subgraphDepthTints.length - 1)]
+  }
+  return theme.subgraphFill
 }
 
 // ── Narrative "Ink" ──────────────────────────────────────────────────────────
@@ -40,6 +51,7 @@ const NARRATIVE: Theme = {
   nodeFill: 0x161b22,
   nodeStroke: 0x30363d,
   nodeStrokeSelected: 0x58a6ff,
+  brokenLinkAccent: 0xf85149,
   nodeText: 0xe6edf3,
   edgeColor: 0x6e7681,
   edgeLabelColor: 0x8b949e,
@@ -48,15 +60,49 @@ const NARRATIVE: Theme = {
   subgraphStroke: 0x30363d,
   subgraphStrokeAlpha: 0.6,
   subgraphLabel: 0x8b949e,
+  subgraphDepthTints: [0x161b22, 0x1d2631, 0x1f2c39],
   hoverGlow: 0x58a6ff,
   hoverGlowAlpha: 0.2,
   accent: 0x58a6ff,
   strokeWidth: 2,
   cornerRadius: 8,
-  dimmedAlpha: 0.2,
+  dimmedAlpha: 0.3,
+  messageOverlayBg: 0x111827,
+  messageTitle: '#f9fafb',
+  messageBody: '#9ca3af',
   breadcrumbBg: '#0d1117',
   breadcrumbText: '#8b949e',
   breadcrumbAccent: '#58a6ff',
+}
+
+const NARRATIVE_LIGHT: Theme = {
+  name: 'Ink Light',
+  background: 0xf6f8fa,
+  nodeFill: 0xffffff,
+  nodeStroke: 0xd0d7de,
+  nodeStrokeSelected: 0x0969da,
+  brokenLinkAccent: 0xcf222e,
+  nodeText: 0x1f2328,
+  edgeColor: 0x57606a,
+  edgeLabelColor: 0x57606a,
+  subgraphFill: 0xf6f8fa,
+  subgraphFillAlpha: 0.92,
+  subgraphStroke: 0xd0d7de,
+  subgraphStrokeAlpha: 0.9,
+  subgraphLabel: 0x57606a,
+  subgraphDepthTints: [0xf6f8fa, 0xeaeef2, 0xe1e7ec],
+  hoverGlow: 0x0969da,
+  hoverGlowAlpha: 0.16,
+  accent: 0x0969da,
+  strokeWidth: 2,
+  cornerRadius: 8,
+  dimmedAlpha: 0.32,
+  messageOverlayBg: 0xffffff,
+  messageTitle: '#1f2328',
+  messageBody: '#57606a',
+  breadcrumbBg: '#ffffff',
+  breadcrumbText: '#57606a',
+  breadcrumbAccent: '#0969da',
 }
 
 // ── Map "Atlas" ──────────────────────────────────────────────────────────────
@@ -66,21 +112,25 @@ const MAP: Theme = {
   nodeFill: 0x16213e,
   nodeStroke: 0x0f3460,
   nodeStrokeSelected: 0xe94560,
+  brokenLinkAccent: 0xff7b72,
   nodeText: 0xeaeaea,
   edgeColor: 0x5a5a8c,
-  edgeLabelColor: 0x7a7a9e,
+  edgeLabelColor: 0xc7cbe6,
   subgraphFill: 0x0f3460,
   subgraphFillAlpha: 0.3,
   subgraphStroke: 0x0f3460,
   subgraphStrokeAlpha: 0.6,
-  subgraphLabel: 0x7a7a9e,
-  subgraphDepthTints: [0x0f3460, 0x533483, 0xe94560],
+  subgraphLabel: 0xc7cbe6,
+  subgraphDepthTints: [0x0f3460, 0x3f2d68, 0x2d1f45],
   hoverGlow: 0xe94560,
   hoverGlowAlpha: 0.25,
   accent: 0xe94560,
   strokeWidth: 2,
   cornerRadius: 10,
-  dimmedAlpha: 0.2,
+  dimmedAlpha: 0.3,
+  messageOverlayBg: 0x1a1a2e,
+  messageTitle: '#f5f7ff',
+  messageBody: '#c7cbe6',
   breadcrumbBg: '#1a1a2e',
   breadcrumbText: '#7a7a9e',
   breadcrumbAccent: '#e94560',
@@ -93,6 +143,7 @@ const BLUEPRINT: Theme = {
   nodeFill: 0x004080,
   nodeStroke: 0x0066cc,
   nodeStrokeSelected: 0x00ffcc,
+  brokenLinkAccent: 0xff6b6b,
   nodeText: 0xffffff,
   edgeColor: 0x0066cc,
   edgeLabelColor: 0x99ccff,
@@ -101,6 +152,7 @@ const BLUEPRINT: Theme = {
   subgraphStroke: 0x0066cc,
   subgraphStrokeAlpha: 0.5,
   subgraphLabel: 0x99ccff,
+  subgraphDepthTints: [0x002b55, 0x003d73, 0x00519a],
   gridColor: 0x003366,
   gridAlpha: 0.3,
   gridSize: 20,
@@ -109,7 +161,10 @@ const BLUEPRINT: Theme = {
   accent: 0x00ffcc,
   strokeWidth: 1.5,
   cornerRadius: 4,
-  dimmedAlpha: 0.2,
+  dimmedAlpha: 0.3,
+  messageOverlayBg: 0x001a33,
+  messageTitle: '#f8fdff',
+  messageBody: '#b8dfff',
   breadcrumbBg: '#001a33',
   breadcrumbText: '#99ccff',
   breadcrumbAccent: '#00ffcc',
@@ -122,6 +177,7 @@ const BREATH: Theme = {
   nodeFill: 0x1a1a1a,
   nodeStroke: 0x333333,
   nodeStrokeSelected: 0xffffff,
+  brokenLinkAccent: 0xff7b72,
   nodeText: 0xeeeeee,
   edgeColor: 0x666666,
   edgeLabelColor: 0x888888,
@@ -130,12 +186,16 @@ const BREATH: Theme = {
   subgraphStroke: 0x333333,
   subgraphStrokeAlpha: 0.4,
   subgraphLabel: 0x888888,
+  subgraphDepthTints: [0x1a1a1a, 0x212121, 0x202020],
   hoverGlow: 0xffffff,
   hoverGlowAlpha: 0.15,
   accent: 0xffffff,
   strokeWidth: 2.5,
   cornerRadius: 16,
-  dimmedAlpha: 0.2,
+  dimmedAlpha: 0.3,
+  messageOverlayBg: 0x111111,
+  messageTitle: '#f5f5f5',
+  messageBody: '#b0b0b0',
   breadcrumbBg: '#111111',
   breadcrumbText: '#888888',
   breadcrumbAccent: '#ffffff',
@@ -148,6 +208,7 @@ const RADIAL: Theme = {
   nodeFill: 0x1a1a2e,
   nodeStroke: 0x4a3a6a,
   nodeStrokeSelected: 0xb07aff,
+  brokenLinkAccent: 0xff8fa3,
   nodeText: 0xe0d8f0,
   edgeColor: 0x6a5a8a,
   edgeLabelColor: 0x9090b0,
@@ -156,12 +217,16 @@ const RADIAL: Theme = {
   subgraphStroke: 0x4a3a6a,
   subgraphStrokeAlpha: 0.5,
   subgraphLabel: 0x9090b0,
+  subgraphDepthTints: [0x1a1a2e, 0x272140, 0x2f2552],
   hoverGlow: 0xb07aff,
   hoverGlowAlpha: 0.25,
   accent: 0xb07aff,
   strokeWidth: 2,
   cornerRadius: 12,
-  dimmedAlpha: 0.2,
+  dimmedAlpha: 0.3,
+  messageOverlayBg: 0x0f0f1a,
+  messageTitle: '#f4eeff',
+  messageBody: '#c7bddc',
   breadcrumbBg: '#0f0f1a',
   breadcrumbText: '#9090b0',
   breadcrumbAccent: '#b07aff',
@@ -174,6 +239,7 @@ const MOSAIC: Theme = {
   nodeFill: 0x1e1e1e,
   nodeStroke: 0x3a3a3a,
   nodeStrokeSelected: 0xff9f43,
+  brokenLinkAccent: 0xff6b4a,
   nodeText: 0xe0e0e0,
   edgeColor: 0x3a3a3a,
   edgeLabelColor: 0x909090,
@@ -182,12 +248,16 @@ const MOSAIC: Theme = {
   subgraphStroke: 0x3a3a3a,
   subgraphStrokeAlpha: 0.4,
   subgraphLabel: 0x909090,
+  subgraphDepthTints: [0x1e1e1e, 0x27211d, 0x32271f],
   hoverGlow: 0xff9f43,
   hoverGlowAlpha: 0.2,
   accent: 0xff9f43,
   strokeWidth: 1.5,
   cornerRadius: 8,
-  dimmedAlpha: 0.2,
+  dimmedAlpha: 0.3,
+  messageOverlayBg: 0x121212,
+  messageTitle: '#f3f3f3',
+  messageBody: '#b8b8b8',
   breadcrumbBg: '#121212',
   breadcrumbText: '#909090',
   breadcrumbAccent: '#ff9f43',
@@ -204,4 +274,19 @@ const THEMES: Record<LayoutPhilosophy, Theme> = {
 
 export function getTheme(philosophy: LayoutPhilosophy): Theme {
   return THEMES[philosophy]
+}
+
+export function resolveTheme(
+  philosophy: LayoutPhilosophy,
+  mode: ThemeMode = 'dark',
+  prefersLight = false,
+  overrides?: ThemeOverrides | null,
+): Theme {
+  const base = mode === 'light' || (mode === 'system' && prefersLight)
+    ? philosophy === 'narrative'
+      ? NARRATIVE_LIGHT
+      : THEMES[philosophy]
+    : THEMES[philosophy]
+
+  return overrides ? { ...base, ...overrides } : base
 }

@@ -2,6 +2,9 @@ import type {
   LoadResult,
   RenderWarning,
   LinkDirective,
+  LinkResolver,
+  LinkState,
+  RenderGraph,
 } from '../types'
 import { extractDirectives } from './directive-extractor'
 import { parseMermaid } from './mermaid-adapter'
@@ -10,9 +13,104 @@ import { buildFlowchartGraph } from './adapters/flowchart'
 /**
  * Full orchestrator: extract directives, parse mermaid, build graph, attach links.
  */
-export async function buildGraph(source: string): Promise<LoadResult> {
+async function validateLinkTargets(
+  graph: RenderGraph,
+  linkResolver: LinkResolver,
+  sourcePath: string,
+  warnings: RenderWarning[],
+): Promise<Map<string, LinkState>> {
+  const linkStates = new Map<string, LinkState>()
+  const targetGraphCache = new Map<string, RenderGraph | null>()
+
+  for (const directive of graph.directives) {
+    if (directive.type !== 'link') continue
+
+    const link = directive as LinkDirective
+    const canonicalTargetFile = await linkResolver.canonicalize(link.targetFile, sourcePath)
+
+    if (!canonicalTargetFile) {
+      const reason = `Link target "${link.targetFile}" is outside the configured resolver scope`
+      warnings.push({
+        code: 'LINK_TARGET_OUT_OF_SCOPE',
+        message: `${reason} (node "${link.nodeId}")`,
+      })
+      linkStates.set(link.nodeId, {
+        nodeId: link.nodeId,
+        rawTargetFile: link.targetFile,
+        targetNode: link.targetNode,
+        status: 'broken',
+        reason,
+        warningCode: 'LINK_TARGET_OUT_OF_SCOPE',
+      })
+      continue
+    }
+
+    const targetSource = await linkResolver.read(canonicalTargetFile)
+    if (targetSource == null) {
+      const reason = `Linked Mermaid file not found: ${canonicalTargetFile}`
+      warnings.push({
+        code: 'LINK_TARGET_NOT_FOUND',
+        message: `${reason} (node "${link.nodeId}")`,
+      })
+      linkStates.set(link.nodeId, {
+        nodeId: link.nodeId,
+        rawTargetFile: link.targetFile,
+        targetNode: link.targetNode,
+        canonicalTargetFile,
+        status: 'broken',
+        reason,
+        warningCode: 'LINK_TARGET_NOT_FOUND',
+      })
+      continue
+    }
+
+    if (link.targetNode) {
+      if (!targetGraphCache.has(canonicalTargetFile)) {
+        const targetResult = await buildGraph(targetSource)
+        targetGraphCache.set(
+          canonicalTargetFile,
+          targetResult.success && targetResult.graph ? targetResult.graph : null,
+        )
+      }
+
+      const targetGraph = targetGraphCache.get(canonicalTargetFile)
+      if (!targetGraph?.nodes.has(link.targetNode)) {
+        const reason = `Linked node "${link.targetNode}" was not found in ${canonicalTargetFile}`
+        warnings.push({
+          code: 'LINK_TARGET_NODE_NOT_FOUND',
+          message: `${reason} (node "${link.nodeId}")`,
+        })
+        linkStates.set(link.nodeId, {
+          nodeId: link.nodeId,
+          rawTargetFile: link.targetFile,
+          targetNode: link.targetNode,
+          canonicalTargetFile,
+          status: 'broken',
+          reason,
+          warningCode: 'LINK_TARGET_NODE_NOT_FOUND',
+        })
+        continue
+      }
+    }
+
+    linkStates.set(link.nodeId, {
+      nodeId: link.nodeId,
+      rawTargetFile: link.targetFile,
+      targetNode: link.targetNode,
+      canonicalTargetFile,
+      status: 'valid',
+    })
+  }
+
+  return linkStates
+}
+
+export async function buildGraph(
+  source: string,
+  options?: { sourcePath?: string; linkResolver?: LinkResolver },
+): Promise<LoadResult> {
   // Step 1: Extract directives from source
-  const { directives, cleanedSource } = extractDirectives(source)
+  const { directives, cleanedSource, warnings: extractionWarnings } = extractDirectives(source)
 
   // Step 2: Parse with mermaid
   let parseResult
@@ -41,7 +139,7 @@ export async function buildGraph(source: string): Promise<LoadResult> {
   })
 
   // Step 4: Validate link directives against graph nodes
-  const warnings: RenderWarning[] = []
+  const warnings: RenderWarning[] = [...extractionWarnings]
   for (const d of directives) {
     if (d.type === 'link') {
       const linkDir = d as LinkDirective
@@ -54,10 +152,16 @@ export async function buildGraph(source: string): Promise<LoadResult> {
     }
   }
 
+  let linkStates: Map<string, LinkState> | undefined
+  if (options?.linkResolver && options.sourcePath) {
+    linkStates = await validateLinkTargets(graph, options.linkResolver, options.sourcePath, warnings)
+  }
+
   return {
     success: true,
     graph,
     errors: [],
     warnings,
+    linkStates,
   }
 }

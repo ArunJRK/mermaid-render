@@ -6,7 +6,7 @@
 
 The diagram is a technical reference. It will be read carefully, not scanned casually. Alignment, symmetry, and precision communicate that "this is authoritative, this is exact." Nothing is accidental — if two nodes are at the same level, that means something. If an edge is horizontal, that means something.
 
-Think: class diagrams, ER diagrams, C4 Component/Code level, database schemas, API relationship maps, type hierarchies.
+Today, think: technical flowcharts, service dependency views, and precise architecture relationships. Future fit includes class diagrams, ER diagrams, C4 Component/Code level, database schemas, API relationship maps, and type hierarchies once parser scope expands beyond `flowchart`.
 
 ## Gestalt Principles
 
@@ -58,13 +58,18 @@ Blueprint blue background (#001a33), grid lines (#003366 at 20px intervals), mon
 
 ## When To Use
 
-- Class diagrams
-- ER diagrams
-- C4 Component and Code level diagrams
-- Database schema diagrams
-- API relationship maps
-- Type hierarchies and inheritance trees
-- Any diagram where precision and alignment are the primary value
+Current v1 shipping parser/runtime support is `flowchart` only. The first three bullets below are the concrete shipped cases; the rest describe future fit once parser scope expands.
+
+- Technical flowcharts that benefit from orthogonal routing and strict alignment
+- Service dependency views rendered with current `flowchart` syntax
+- Architecture relationship maps where precise spacing matters more than story flow
+- Future class diagrams
+- Future ER diagrams
+- Future C4 Component and Code level diagrams
+- Future database schema diagrams
+- Future API relationship maps
+- Future type hierarchies and inheritance trees
+- Any future parser-supported diagram where precision and alignment are the primary value
 
 ## When NOT To Use
 

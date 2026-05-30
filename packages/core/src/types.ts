@@ -15,6 +15,7 @@ export type NodeShape =
 export type EdgeStyle = 'solid' | 'dotted' | 'thick'
 
 export type LayoutPhilosophy = 'narrative' | 'map' | 'blueprint' | 'breath' | 'radial' | 'mosaic'
+export type ThemeMode = 'system' | 'dark' | 'light'
 
 export type DiagramType =
   | 'flowchart'
@@ -72,6 +73,21 @@ export interface LinkDirective {
   nodeId: string
   targetFile: string
   targetNode?: string
+}
+
+export interface LinkResolver {
+  canonicalize(targetFile: string, fromFile: string): string | null | Promise<string | null>
+  read(canonicalFile: string): string | null | Promise<string | null>
+}
+
+export interface LinkState {
+  nodeId: string
+  rawTargetFile: string
+  targetNode?: string
+  canonicalTargetFile?: string
+  status: 'valid' | 'broken'
+  reason?: string
+  warningCode?: string
 }
 
 export interface LayoutDirective {
@@ -154,12 +170,53 @@ export interface LoadResult {
   graph?: RenderGraph
   errors: RenderError[]
   warnings: RenderWarning[]
+  linkStates?: Map<string, LinkState>
 }
 
 export interface LoadOptions {
+  layout?: LayoutPhilosophy | string
   strict?: boolean
   maxNodes?: number
   baseDir?: string
+  sourcePath?: string
+  linkResolver?: LinkResolver
+}
+
+export interface ThemeOverrides {
+  background?: number
+  nodeFill?: number
+  nodeStroke?: number
+  nodeStrokeSelected?: number
+  brokenLinkAccent?: number
+  nodeText?: number
+  edgeColor?: number
+  edgeLabelColor?: number
+  subgraphFill?: number
+  subgraphFillAlpha?: number
+  subgraphStroke?: number
+  subgraphStrokeAlpha?: number
+  subgraphLabel?: number
+  subgraphDepthTints?: number[]
+  gridColor?: number
+  gridAlpha?: number
+  gridSize?: number
+  hoverGlow?: number
+  hoverGlowAlpha?: number
+  accent?: number
+  strokeWidth?: number
+  cornerRadius?: number
+  dimmedAlpha?: number
+  messageOverlayBg?: number
+  messageTitle?: string
+  messageBody?: string
+  breadcrumbBg?: string
+  breadcrumbText?: string
+  breadcrumbAccent?: string
+}
+
+export interface MermaidRendererOptions {
+  themeMode?: ThemeMode
+  themeOverrides?: ThemeOverrides
 }
 
 // ─── Interaction events ──────────────────────────────────────────────────────

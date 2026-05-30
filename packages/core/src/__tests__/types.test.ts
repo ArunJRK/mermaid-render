@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import type {
   RenderGraph, RenderNode, RenderEdge, RenderSubgraph,
-  LinkDirective, LayoutDirective, PositionedGraph, LoadResult,
+  LinkDirective, LayoutDirective, LoadResult, LinkResolver, LinkState,
 } from '../types'
 
 describe('types', () => {
@@ -45,5 +45,21 @@ describe('types', () => {
       success: true, errors: [], warnings: [],
     }
     expect(result.success).toBe(true)
+  })
+
+  it('can construct link resolver state', async () => {
+    const resolver: LinkResolver = {
+      canonicalize: async (targetFile, fromFile) => `${fromFile}:${targetFile}`,
+      read: async () => 'graph TD\nA --> B',
+    }
+    const linkState: LinkState = {
+      nodeId: 'A',
+      rawTargetFile: './target',
+      canonicalTargetFile: '/examples/target.mmd',
+      status: 'valid',
+    }
+    expect(await resolver.canonicalize('./target', '/examples/main.mmd'))
+      .toBe('/examples/main.mmd:./target')
+    expect(linkState.status).toBe('valid')
   })
 })

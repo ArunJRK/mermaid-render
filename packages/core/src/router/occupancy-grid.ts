@@ -1,4 +1,5 @@
 import { GRID_SIZE, COMPONENT_CLEARANCE, GRID_PADDING, type GridCell } from './types'
+import { estimateRenderedNodeFootprint } from '../node-footprint'
 
 export class OccupancyGrid {
   private _cells: Uint8Array
@@ -57,9 +58,16 @@ export class OccupancyGrid {
     }
   }
 
-  markNode(node: { x: number; y: number; width: number; height: number }): void {
-    const hw = node.width / 2 + COMPONENT_CLEARANCE
-    const hh = node.height / 2 + COMPONENT_CLEARANCE
+  markNode(node: { x: number; y: number; width: number; height: number; label?: string }, monospace: boolean = false): void {
+    const footprint = node.label
+      ? estimateRenderedNodeFootprint({
+        label: node.label,
+        width: node.width,
+        height: node.height,
+      }, monospace)
+      : { width: node.width, height: node.height }
+    const hw = footprint.width / 2 + COMPONENT_CLEARANCE
+    const hh = footprint.height / 2 + COMPONENT_CLEARANCE
     const min = this.worldToCell(node.x - hw, node.y - hh)
     const max = this.worldToCell(node.x + hw, node.y + hh)
     for (let gy = min.gy; gy <= max.gy; gy++) {

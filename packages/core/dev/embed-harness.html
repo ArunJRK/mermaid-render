@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>mermaid-render Embed Harness</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #0f172a;
+        color: #e5e7eb;
+        font: 14px/1.4 Inter, system-ui, sans-serif;
+      }
+
+      main {
+        width: min(920px, calc(100vw - 32px));
+        display: grid;
+        gap: 12px;
+      }
+
+      .status {
+        padding: 10px 12px;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        background: #111827;
+        white-space: pre-wrap;
+      }
+
+      canvas {
+        width: 100%;
+        height: min(70vh, 560px);
+        display: block;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        background: #111827;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="status" id="status">Mounting renderer…</div>
+      <canvas id="embed-canvas" aria-label="Mermaid renderer canvas"></canvas>
+    </main>
+    <script type="module" src="./embed-harness.ts"></script>
+  </body>
+</html>

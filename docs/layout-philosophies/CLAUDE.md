@@ -1,5 +1,8 @@
 # Layout Philosophies — Guide for AI Agents
 
+Current v1 reality: only `narrative` and `blueprint` have dedicated layout engines in code. `map`, `breath`, `radial`, and `mosaic` are still theme/spacing presets on top of the generic Dagre path and should not be described as shipped custom engines.
+Current parser reality: the shipped v1 parser path is `flowchart` only. When a philosophy doc mentions class diagrams, ER diagrams, state diagrams, or C4 as a good fit, treat that as future intent unless there is matching parser/runtime support in code.
+
 ## What Is a Philosophy?
 
 A layout philosophy is an opinionated rendering preset that controls FOUR axes:
@@ -15,12 +18,12 @@ A philosophy is NOT just colors and spacing. It fundamentally changes the render
 
 | Philosophy | Algorithm | Edges | Unique Feature |
 |------------|-----------|-------|----------------|
-| Narrative | Dagre + flow lanes | Smooth bezier | Center/left/right lane splitting at decisions |
-| Map | d3-force (force-directed) | Curved, bundled | Obsidian-style organic clustering |
-| Blueprint | Dagre + grid snap | Straight/diagonal + collision avoidance | Grid background, monospace font, blueprint blue |
-| Breath | Dagre + 3-4x spacing | Whisper lines (1px, 0.3 opacity) | Presentation mode, huge nodes |
-| Radial | Radial tree | Curved arcs | Central node with concentric rings |
-| Mosaic | Masonry card grid | No edges (proximity only) | Card layout, no visible connections |
+| Narrative | Shipped | Dedicated layout engine | Smooth bezier | Center/left/right lane splitting at decisions |
+| Blueprint | Shipped | Dedicated layout engine | Straight/diagonal + collision avoidance | Grid background, monospace font, blueprint blue |
+| Map | Experimental | Dagre fallback + theme | Straight edges today | Future force-directed clustering |
+| Breath | Experimental | Dagre fallback + theme | Whisper-style rendering | Presentation spacing |
+| Radial | Experimental | Dagre fallback + theme | Straight edges today | Future radial arrangement |
+| Mosaic | Experimental | Dagre fallback + theme | Straight edges today | Future card/proximity layout |
 
 ## Adding a New Philosophy
 
@@ -47,10 +50,10 @@ Every philosophy file MUST have these sections:
 
 ## Implementation Architecture
 
-Each philosophy maps to:
+Each shipped philosophy maps to:
 - A `PhilosophyConfig` in `philosophy-config.ts` (spacing, sizing numbers)
 - A `Theme` in `theme.ts` (colors, fonts, visual properties)
-- Optionally a different layout engine (dagre vs d3-force vs radial vs grid)
+- Optionally a different layout engine
 - Optionally different edge rendering logic in `edge-graphic.ts`
 
 The `MermaidRenderer` reads the philosophy from the `@layout` directive or programmatic option and wires up the correct layout engine + theme + edge renderer.

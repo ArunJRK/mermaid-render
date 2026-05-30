@@ -3,11 +3,13 @@ import type { RoutedWire, RouteResult, WireSegment } from './types'
 import { GRID_SIZE } from './types'
 import { OccupancyGrid } from './occupancy-grid'
 import { manhattanRoute, pathToSegments } from './manhattan-router'
+import { estimateRenderedNodeFootprint } from '../node-footprint'
 
 export class BlueprintWireBuilder {
   private _graph: PositionedGraph
   private _grid!: OccupancyGrid
   private _g: number
+  private _usedFallbackRoute = false
 
   constructor(graph: PositionedGraph, gridSize: number = GRID_SIZE) {
     this._graph = graph
@@ -16,12 +18,15 @@ export class BlueprintWireBuilder {
 
   route(): RouteResult {
     const wires: RoutedWire[] = []
+    this._usedFallbackRoute = false
     this._buildGrid()
+    const orderedEdges = [...this._graph.edges]
+      .sort((left, right) => this._compareEdges(left, right))
 
     // Compute degree maps
     const outDegree = new Map<string, string[]>()
     const inDegree = new Map<string, string[]>()
-    for (const edge of this._graph.edges) {
+    for (const edge of orderedEdges) {
       if (edge.source === edge.target) continue // I15: reject self-loops
       if (!outDegree.has(edge.source)) outDegree.set(edge.source, [])
       outDegree.get(edge.source)!.push(edge.id)
@@ -48,7 +53,7 @@ export class BlueprintWireBuilder {
     for (const srcId of fanOutSources) {
       const srcNode = this._graph.nodes.get(srcId)
       if (!srcNode) continue
-      const edges = this._graph.edges.filter(e => e.source === srcId)
+      const edges = orderedEdges.filter(e => e.source === srcId)
       const busWires = this._routeFanOut(srcId, srcNode, edges)
       for (const w of busWires) {
         wires.push(w)
@@ -60,7 +65,7 @@ export class BlueprintWireBuilder {
     for (const tgtId of fanInTargets) {
       const tgtNode = this._graph.nodes.get(tgtId)
       if (!tgtNode) continue
-      const edges = this._graph.edges.filter(e => e.target === tgtId && !handled.has(e.id))
+      const edges = orderedEdges.filter(e => e.target === tgtId && !handled.has(e.id))
       if (edges.length < 2) continue
       const mergeWires = this._routeFanIn(tgtId, tgtNode, edges)
       for (const w of mergeWires) {
@@ -70,7 +75,7 @@ export class BlueprintWireBuilder {
     }
 
     // Phase 3: Direct routes for remaining single edges
-    for (const edge of this._graph.edges) {
+    for (const edge of orderedEdges) {
       if (handled.has(edge.id)) continue
       if (edge.source === edge.target) continue
       const wire = this._routeDirect(edge)
@@ -79,7 +84,7 @@ export class BlueprintWireBuilder {
       }
     }
 
-    return { wires, congested: false }
+    return { wires, congested: this._usedFallbackRoute }
   }
 
   private _buildGrid(): void {
@@ -88,17 +93,16 @@ export class BlueprintWireBuilder {
       this._grid = new OccupancyGrid(0, 0, 100, 100, this._g)
       return
     }
+    const footprints = nodes.map((node) => estimateRenderedNodeFootprint(node, true))
     const xs = nodes.map(n => n.x)
     const ys = nodes.map(n => n.y)
-    const ws = nodes.map(n => n.width)
-    const hs = nodes.map(n => n.height)
-    const minX = Math.min(...xs.map((x, i) => x - ws[i] / 2))
-    const minY = Math.min(...ys.map((y, i) => y - hs[i] / 2))
-    const maxX = Math.max(...xs.map((x, i) => x + ws[i] / 2))
-    const maxY = Math.max(...ys.map((y, i) => y + hs[i] / 2))
+    const minX = Math.min(...xs.map((x, i) => x - footprints[i].width / 2))
+    const minY = Math.min(...ys.map((y, i) => y - footprints[i].height / 2))
+    const maxX = Math.max(...xs.map((x, i) => x + footprints[i].width / 2))
+    const maxY = Math.max(...ys.map((y, i) => y + footprints[i].height / 2))
     this._grid = new OccupancyGrid(minX, minY, maxX, maxY, this._g)
     for (const node of nodes) {
-      this._grid.markNode(node)
+      this._grid.markNode(node, true)
     }
   }
 
@@ -144,7 +148,7 @@ export class BlueprintWireBuilder {
     const src = this._exitPort(srcNode)
     const tgt = this._entryPort(tgtNode)
     const segments = this._routeAstar(src.x, src.y, tgt.x, tgt.y, edge.id)
-    if (!segments) return null
+      ?? this._fallbackSegments(src, tgt, edge.id)
     return { edgeId: edge.id, segments, source: edge.source, target: edge.target }
   }
 
@@ -157,9 +161,8 @@ export class BlueprintWireBuilder {
       if (!tgtNode) continue
       const tgt = this._entryPort(tgtNode)
       const segments = this._routeAstar(src.x, src.y, tgt.x, tgt.y, edge.id)
-      if (segments) {
-        wires.push({ edgeId: edge.id, segments, source: edge.source, target: edge.target })
-      }
+        ?? this._fallbackSegments(src, tgt, edge.id)
+      wires.push({ edgeId: edge.id, segments, source: edge.source, target: edge.target })
     }
     return wires
   }
@@ -173,10 +176,40 @@ export class BlueprintWireBuilder {
       if (!srcNode) continue
       const src = this._exitPort(srcNode)
       const segments = this._routeAstar(src.x, src.y, tgt.x, tgt.y, edge.id)
-      if (segments) {
-        wires.push({ edgeId: edge.id, segments, source: edge.source, target: edge.target })
-      }
+        ?? this._fallbackSegments(src, tgt, edge.id)
+      wires.push({ edgeId: edge.id, segments, source: edge.source, target: edge.target })
     }
     return wires
+  }
+
+  private _fallbackSegments(
+    src: { x: number; y: number },
+    tgt: { x: number; y: number },
+    edgeId: string,
+  ): WireSegment[] {
+    this._usedFallbackRoute = true
+    if (src.x === tgt.x || src.y === tgt.y) {
+      return [{
+        x1: src.x,
+        y1: src.y,
+        x2: tgt.x,
+        y2: tgt.y,
+        isHorizontal: src.y === tgt.y,
+        edgeId,
+      }]
+    }
+
+    const midY = Math.round(((src.y + tgt.y) / 2) / this._g) * this._g
+    return [
+      { x1: src.x, y1: src.y, x2: src.x, y2: midY, isHorizontal: false, edgeId },
+      { x1: src.x, y1: midY, x2: tgt.x, y2: midY, isHorizontal: true, edgeId },
+      { x1: tgt.x, y1: midY, x2: tgt.x, y2: tgt.y, isHorizontal: false, edgeId },
+    ]
+  }
+
+  private _compareEdges(left: PositionedEdge, right: PositionedEdge): number {
+    return left.id.localeCompare(right.id)
+      || left.source.localeCompare(right.source)
+      || left.target.localeCompare(right.target)
   }
 }

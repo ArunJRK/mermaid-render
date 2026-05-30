@@ -6,11 +6,13 @@ import type {
   RankDirective,
   SpacingDirective,
   LayoutPhilosophy,
+  RenderWarning,
 } from '../types'
 
 export interface ExtractionResult {
   directives: Directive[]
   cleanedSource: string
+  warnings: RenderWarning[]
 }
 
 // %% @link <nodeId> -> <path>#<fragment>
@@ -43,6 +45,7 @@ export function extractDirectives(source: string): ExtractionResult {
   const lines = source.split('\n')
   const directives: Directive[] = []
   const cleanedLines: string[] = []
+  const warnings: RenderWarning[] = []
 
   for (const line of lines) {
     const trimmed = line.trim()
@@ -58,6 +61,13 @@ export function extractDirectives(source: string): ExtractionResult {
         ...(targetNode !== undefined ? { targetNode } : {}),
       }
       directives.push(d)
+      continue
+    }
+    if (trimmed.startsWith('%% @link')) {
+      warnings.push({
+        code: 'LINK_DIRECTIVE_INVALID',
+        message: `Malformed @link directive ignored: "${trimmed}"`,
+      })
       continue
     }
 
@@ -117,5 +127,6 @@ export function extractDirectives(source: string): ExtractionResult {
   return {
     directives,
     cleanedSource: cleanedLines.join('\n'),
+    warnings,
   }
 }

@@ -1,9 +1,20 @@
-import type { RenderGraph, PositionedGraph, LayoutDirective, RenderError } from '../types'
+import type {
+  RenderGraph,
+  PositionedGraph,
+  LayoutDirective,
+  RenderError,
+  RenderWarning,
+  LinkResolver,
+  LinkState,
+} from '../types'
 import { buildGraph } from '../parser/graph-builder'
 import { DagreLayout } from '../layout/dagre-layout'
 import { BlueprintLayout } from '../layout/blueprint-layout'
 import { NarrativeLayout } from '../layout/narrative-layout'
 import type { LayoutEngine } from '../layout/layout-engine'
+
+const VERIFIED_INTERACTIVE_NODE_FLOOR = 220
+const VERIFIED_INTERACTIVE_EDGE_FLOOR = 294
 
 /** Factory: select the right layout engine for the given philosophy */
 export function createLayoutEngine(philosophy: string): LayoutEngine {
@@ -19,7 +30,8 @@ export interface PipelineResult {
   graph?: RenderGraph
   positioned?: PositionedGraph
   errors?: RenderError[]
-  warnings?: any[]
+  warnings?: RenderWarning[]
+  linkStates?: Map<string, LinkState>
 }
 
 export class LoadPipeline {
@@ -27,10 +39,16 @@ export class LoadPipeline {
   lastPositioned: PositionedGraph | null = null
   private loadId = 0
 
-  async load(source: string, options?: { layout?: string }): Promise<PipelineResult> {
+  async load(
+    source: string,
+    options?: { layout?: string; sourcePath?: string; linkResolver?: LinkResolver },
+  ): Promise<PipelineResult> {
     const currentId = ++this.loadId
 
-    const result = await buildGraph(source)
+    const result = await buildGraph(source, {
+      sourcePath: options?.sourcePath,
+      linkResolver: options?.linkResolver,
+    })
 
     // Check cancellation
     if (currentId !== this.loadId) {
@@ -51,6 +69,17 @@ export class LoadPipeline {
     // Layout
     const layout = createLayoutEngine(philosophy)
     const positioned = layout.compute(result.graph)
+    const warnings = [...(result.warnings ?? [])]
+
+    if (
+      result.graph.nodes.size > VERIFIED_INTERACTIVE_NODE_FLOOR
+      || result.graph.edges.length > VERIFIED_INTERACTIVE_EDGE_FLOOR
+    ) {
+      warnings.push({
+        code: 'PERF_STRESS_THRESHOLD',
+        message: `Diagram exceeds the current verified interactive floor (~${VERIFIED_INTERACTIVE_NODE_FLOOR} nodes / ~${VERIFIED_INTERACTIVE_EDGE_FLOOR} edges). Interaction remains best-effort; prefer folding or cross-file links to keep views smaller.`,
+      })
+    }
 
     this.lastGraph = result.graph
     this.lastPositioned = positioned
@@ -59,7 +88,8 @@ export class LoadPipeline {
       success: true,
       graph: result.graph,
       positioned,
-      warnings: result.warnings,
+      warnings,
+      linkStates: result.linkStates,
     }
   }
 }

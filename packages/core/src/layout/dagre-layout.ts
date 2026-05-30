@@ -3,6 +3,7 @@ import { computeNodeWidth } from './text-measure'
 import type {
   RenderGraph,
   RenderEdge,
+  RenderNode,
   PositionedGraph,
   PositionedNode,
   PositionedEdge,
@@ -122,7 +123,7 @@ export class DagreLayout implements LayoutEngine {
     }>()
 
     for (const [sgId, sg] of activeSubgraphs) {
-      const internalEdges = this._getInternalEdges(graph.edges, sg.nodeIds, hiddenNodeIds, collapsedSubgraphs)
+      const internalEdges = this._getInternalEdges(graph.edges, sg.nodeIds, hiddenNodeIds)
       const internalResult = this._layoutInternalNodes(
         graph, sg.nodeIds, internalEdges, graph.direction,
       )
@@ -156,10 +157,11 @@ export class DagreLayout implements LayoutEngine {
     // Add orphan nodes as individual nodes in cluster graph
     for (const nid of orphanNodeIds) {
       const node = graph.nodes.get(nid)!
+      const size = this._nodeSize(node)
       clusterG.setNode(nid, {
         label: node.label,
-        width: computeNodeWidth(node.label, cfg.nodeMinWidth, cfg.nodePadding),
-        height: cfg.nodeMinHeight,
+        width: size.width,
+        height: size.height,
       })
     }
 
@@ -213,7 +215,7 @@ export class DagreLayout implements LayoutEngine {
     const positionedNodes = new Map<string, PositionedNode>()
     const positionedSubgraphs = new Map<string, PositionedSubgraph>()
 
-    for (const [sgId, sg] of activeSubgraphs) {
+    for (const [sgId] of activeSubgraphs) {
       const clusterNode = clusterG.node(sgId)
       const internal = internalLayouts.get(sgId)!
 
@@ -352,10 +354,11 @@ export class DagreLayout implements LayoutEngine {
     for (const nid of nodeIds) {
       const node = graph.nodes.get(nid)
       if (!node) continue
+      const size = this._nodeSize(node)
       g.setNode(nid, {
         label: node.label,
-        width: computeNodeWidth(node.label, cfg.nodeMinWidth, cfg.nodePadding),
-        height: cfg.nodeMinHeight,
+        width: size.width,
+        height: size.height,
       })
     }
 
@@ -402,7 +405,6 @@ export class DagreLayout implements LayoutEngine {
     edges: RenderEdge[],
     nodeIds: string[],
     hiddenNodeIds: Set<string>,
-    collapsedSubgraphs: Map<string, string[]>,
   ): RenderEdge[] {
     const nodeSet = new Set(nodeIds)
     return edges.filter(
@@ -452,10 +454,11 @@ export class DagreLayout implements LayoutEngine {
     // Add visible nodes
     for (const [id, node] of graph.nodes) {
       if (hiddenNodeIds.has(id)) continue
+      const size = this._nodeSize(node)
       g.setNode(id, {
         label: node.label,
-        width: computeNodeWidth(node.label, cfg.nodeMinWidth, cfg.nodePadding),
-        height: cfg.nodeMinHeight,
+        width: size.width,
+        height: size.height,
       })
 
       for (const [sgId, sg] of graph.subgraphs) {
@@ -560,30 +563,58 @@ export class DagreLayout implements LayoutEngine {
             width: dagreGroup.width,
             height: dagreGroup.height,
           })
-        } else {
-          const memberNodes = sg.nodeIds
-            .map((id) => positionedNodes.get(id))
-            .filter((n): n is PositionedNode => n !== undefined)
-
-          if (memberNodes.length > 0) {
-            const padding = 30 * m
-            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
-            for (const node of memberNodes) {
-              minX = Math.min(minX, node.x - node.width / 2)
-              minY = Math.min(minY, node.y - node.height / 2)
-              maxX = Math.max(maxX, node.x + node.width / 2)
-              maxY = Math.max(maxY, node.y + node.height / 2)
-            }
-            positionedSubgraphs.set(sgId, {
-              ...sg,
-              x: (minX + maxX) / 2,
-              y: (minY + maxY) / 2,
-              width: maxX - minX + padding * 2,
-              height: maxY - minY + padding * 2 + 20,
-            })
-          }
         }
       }
+    }
+
+    const padding = 30 * m
+    const pending = new Set(
+      Array.from(graph.subgraphs.entries())
+        .filter(([, sg]) => !sg.collapsed)
+        .map(([sgId]) => sgId),
+    )
+    while (pending.size > 0) {
+      let progressed = false
+      for (const sgId of Array.from(pending)) {
+        const sg = graph.subgraphs.get(sgId)!
+        const childSubgraphs = sg.nodeIds
+          .map((id) => positionedSubgraphs.get(id))
+          .filter((subgraph): subgraph is PositionedSubgraph => subgraph !== undefined)
+        const unresolvedChildren = sg.nodeIds
+          .filter((id) => graph.subgraphs.has(id) && !positionedSubgraphs.has(id))
+        if (childSubgraphs.length === 0 || unresolvedChildren.length > 0) continue
+
+        const memberNodes = sg.nodeIds
+          .map((id) => positionedNodes.get(id))
+          .filter((n): n is PositionedNode => n !== undefined)
+
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+        for (const node of memberNodes) {
+          minX = Math.min(minX, node.x - node.width / 2)
+          minY = Math.min(minY, node.y - node.height / 2)
+          maxX = Math.max(maxX, node.x + node.width / 2)
+          maxY = Math.max(maxY, node.y + node.height / 2)
+        }
+        for (const child of childSubgraphs) {
+          minX = Math.min(minX, child.x - child.width / 2)
+          minY = Math.min(minY, child.y - child.height / 2)
+          maxX = Math.max(maxX, child.x + child.width / 2)
+          maxY = Math.max(maxY, child.y + child.height / 2)
+        }
+
+        const base = positionedSubgraphs.get(sgId)
+        positionedSubgraphs.set(sgId, {
+          ...sg,
+          x: (minX + maxX) / 2,
+          y: (minY + maxY) / 2,
+          width: Math.max(base?.width ?? 0, maxX - minX + padding * 2),
+          height: Math.max(base?.height ?? 0, maxY - minY + padding * 2 + 20),
+        })
+        pending.delete(sgId)
+        progressed = true
+      }
+
+      if (!progressed) break
     }
 
     const graphLabel = g.graph()
@@ -633,5 +664,23 @@ export class DagreLayout implements LayoutEngine {
     }
 
     return result
+  }
+
+  private _nodeSize(node: RenderNode): { width: number; height: number } {
+    let width = computeNodeWidth(node.label, this.config.nodeMinWidth, this.config.nodePadding)
+    let height = this.config.nodeMinHeight
+
+    if (node.shape === 'diamond') {
+      width = Math.ceil(width * 1.35)
+      height = Math.ceil(height * 1.25)
+    } else if (node.shape === 'circle') {
+      const diameter = Math.max(width, height)
+      width = diameter
+      height = diameter
+    } else if (node.shape === 'hexagon') {
+      width = Math.ceil(width * 1.15)
+    }
+
+    return { width, height }
   }
 }

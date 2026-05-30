@@ -27,6 +27,21 @@ describe('OccupancyGrid', () => {
     expect(grid.isFree(160, 100)).toBe(true)
   })
 
+  it('marks the rendered label-expanded footprint, not only the layout box', () => {
+    const grid = new OccupancyGrid(0, 0, 500, 500, 20)
+    grid.markNode({
+      x: 200,
+      y: 200,
+      width: 160,
+      height: 44,
+      label: 'MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+    } as any)
+
+    // The layout box alone would stop around x≈288 with clearance.
+    // A rendered long-label blueprint node expands wider and must still block routing here.
+    expect(grid.isFree(300, 200)).toBe(false)
+  })
+
   it('marks wire path cells as occupied', () => {
     const grid = new OccupancyGrid(0, 0, 200, 200, 20)
     grid.markPath([

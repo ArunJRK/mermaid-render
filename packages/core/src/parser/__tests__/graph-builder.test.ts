@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { buildGraph } from '../graph-builder'
+import { createVirtualFileResolver } from '../../linking/virtual-file-resolver'
 import type { LoadResult } from '../../types'
 
 describe('buildGraph', () => {
@@ -118,5 +119,66 @@ graph TD
     expect(result.success).toBe(true)
     expect(result.warnings).toHaveLength(1)
     expect(result.warnings[0].code).toBe('LINK_NODE_NOT_FOUND')
+  })
+
+  it('validates linked files and fragments through the resolver', async () => {
+    const resolver = createVirtualFileResolver({
+      '/examples/main.mmd': `%% @link good -> ./target#ready
+%% @link bad -> ./missing#nowhere
+graph TD
+    good[Good] --> bad[Bad]`,
+      '/examples/target.mmd': `graph TD
+    ready[Ready] --> done[Done]`,
+    })
+
+    const result = await buildGraph(
+      `%% @link good -> ./target#ready
+%% @link bad -> ./missing#nowhere
+graph TD
+    good[Good] --> bad[Bad]`,
+      {
+        sourcePath: '/examples/main.mmd',
+        linkResolver: resolver,
+      },
+    )
+
+    expect(result.success).toBe(true)
+    expect(result.linkStates?.get('good')).toMatchObject({
+      status: 'valid',
+      canonicalTargetFile: '/examples/target.mmd',
+    })
+    expect(result.linkStates?.get('bad')).toMatchObject({
+      status: 'broken',
+      canonicalTargetFile: '/examples/missing.mmd',
+      warningCode: 'LINK_TARGET_NOT_FOUND',
+    })
+    expect(result.warnings.some((warning) => warning.code === 'LINK_TARGET_NOT_FOUND')).toBe(true)
+  })
+
+  it('warns when a linked fragment is missing from the target graph', async () => {
+    const resolver = createVirtualFileResolver({
+      '/examples/main.mmd': `%% @link bad -> ./target#missingNode
+graph TD
+    bad[Bad]`,
+      '/examples/target.mmd': `graph TD
+    ready[Ready]`,
+    })
+
+    const result = await buildGraph(
+      `%% @link bad -> ./target#missingNode
+graph TD
+    bad[Bad]`,
+      {
+        sourcePath: '/examples/main.mmd',
+        linkResolver: resolver,
+      },
+    )
+
+    expect(result.success).toBe(true)
+    expect(result.linkStates?.get('bad')).toMatchObject({
+      status: 'broken',
+      warningCode: 'LINK_TARGET_NODE_NOT_FOUND',
+    })
+    expect(result.warnings.some((warning) => warning.code === 'LINK_TARGET_NODE_NOT_FOUND')).toBe(true)
   })
 })

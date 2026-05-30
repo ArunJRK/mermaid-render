@@ -1,4 +1,4 @@
-import { Container } from 'pixi.js'
+import { Container, Ticker } from 'pixi.js'
 import { Spring, type SpringConfig } from './spring'
 
 const MIN_ZOOM = 0.1
@@ -25,6 +25,9 @@ export class Viewport extends Container {
 
   /** Called whenever the zoom level changes (for semantic zoom). */
   onZoomChange: ((zoom: number) => void) | null = null
+  onActivity: (() => void) | null = null
+  onPanStateChange: ((active: boolean) => void) | null = null
+  onAnimationStateChange: ((active: boolean) => void) | null = null
 
   private _isPanning = false
   private _panStartX = 0
@@ -40,10 +43,11 @@ export class Viewport extends Container {
   private _onPointerUp: ((e: PointerEvent) => void) | null = null
 
   // Spring animation state
-  private _animationId: number | null = null
   private _springX: Spring | null = null
   private _springY: Spring | null = null
   private _springZoom: Spring | null = null
+  private _ticker: Ticker | null = null
+  private _tickerStep: ((ticker: Ticker) => void) | null = null
 
   /**
    * Attach wheel/pointer listeners to the given canvas element.
@@ -66,15 +70,26 @@ export class Viewport extends Container {
       const dy = e.clientY - this._panStartY
       this.x = this._panOriginX + dx
       this.y = this._panOriginY + dy
+      this.onActivity?.()
     }
 
     this._onPointerUp = () => {
+      if (this._isPanning) {
+        this._isPanning = false
+        this.onPanStateChange?.(false)
+        this.onActivity?.()
+        return
+      }
       this._isPanning = false
     }
 
     canvas.addEventListener('wheel', this._onWheel, { passive: false })
     window.addEventListener('pointermove', this._onPointerMove)
     window.addEventListener('pointerup', this._onPointerUp)
+  }
+
+  attachTicker(ticker: Ticker): void {
+    this._ticker = ticker
   }
 
   /**
@@ -86,13 +101,26 @@ export class Viewport extends Container {
     this._panStartY = clientY
     this._panOriginX = this.x
     this._panOriginY = this.y
+    this.onPanStateChange?.(true)
+    this.onActivity?.()
   }
 
   /**
    * Scale and centre the viewport so the content fits within the canvas.
    */
   fitToView(contentWidth: number, contentHeight: number): void {
+    this.fitToBounds(0, 0, contentWidth, contentHeight)
+  }
+
+  /**
+   * Scale and centre the viewport so an arbitrary world-space bounds rectangle
+   * fits within the canvas.
+   */
+  fitToBounds(minX: number, minY: number, maxX: number, maxY: number): void {
+    const contentWidth = maxX - minX
+    const contentHeight = maxY - minY
     if (!this._canvas || contentWidth <= 0 || contentHeight <= 0) return
+
     const cw = this._canvas.clientWidth
     const ch = this._canvas.clientHeight
     const padding = 40
@@ -100,26 +128,21 @@ export class Viewport extends Container {
     const scaleY = (ch - padding * 2) / contentHeight
     const fitZoom = Math.min(scaleX, scaleY, MAX_ZOOM)
 
-    // Enforce minimum readable zoom — content should never be tiny
-    const MIN_READABLE_ZOOM = 0.5
-    this._zoom = Math.max(fitZoom, MIN_READABLE_ZOOM)
+    // Below this, labels counter-scale enough that dense diagrams become
+    // visually stacked. Prefer readable initial scale and let users pan.
+    const minReadableZoom = cw < 700 ? 0.32 : 0.5
+    this._zoom = Math.max(fitZoom, minReadableZoom)
     this.scale.set(this._zoom)
 
-    // Center horizontally
-    this.x = (cw - contentWidth * this._zoom) / 2
-
-    // Start at the TOP of the diagram, not center
-    // If diagram fits in viewport, center vertically. Otherwise, show from top.
+    const scaledWidth = contentWidth * this._zoom
     const scaledHeight = contentHeight * this._zoom
-    if (scaledHeight <= ch - padding * 2) {
-      // Fits: center vertically
-      this.y = (ch - scaledHeight) / 2
-    } else {
-      // Doesn't fit: start at top with padding
-      this.y = padding
-    }
+    const innerWidth = cw - padding * 2
+    const innerHeight = ch - padding * 2
+    this.x = padding + Math.max(0, (innerWidth - scaledWidth) / 2) - minX * this._zoom
+    this.y = padding + Math.max(0, (innerHeight - scaledHeight) / 2) - minY * this._zoom
 
     this.onZoomChange?.(this._zoom)
+    this.onActivity?.()
   }
 
   /**
@@ -168,10 +191,7 @@ export class Viewport extends Container {
    */
   animateTo(target: ViewportTarget, springConfig?: SpringConfig): void {
     // Cancel any running animation
-    if (this._animationId !== null) {
-      cancelAnimationFrame(this._animationId)
-      this._animationId = null
-    }
+    this._stopAnimation()
 
     const config = springConfig ?? VIEWPORT_SPRING
 
@@ -183,13 +203,10 @@ export class Viewport extends Container {
     this._springX.setTarget(target.x)
     this._springY.setTarget(target.y)
     this._springZoom.setTarget(target.zoom)
+    this.onAnimationStateChange?.(true)
+    this.onActivity?.()
 
-    let lastTime = performance.now()
-
-    const tick = () => {
-      const now = performance.now()
-      const dt = (now - lastTime) / 1000 // seconds
-      lastTime = now
+    const tick = (dt: number) => {
 
       this._springX!.tick(dt)
       this._springY!.tick(dt)
@@ -200,6 +217,7 @@ export class Viewport extends Container {
       this._zoom = this._springZoom!.value
       this.scale.set(this._zoom)
       this.onZoomChange?.(this._zoom)
+      this.onActivity?.()
 
       const settled =
         this._springX!.isSettled &&
@@ -207,7 +225,7 @@ export class Viewport extends Container {
         this._springZoom!.isSettled
 
       if (!settled) {
-        this._animationId = requestAnimationFrame(tick)
+        return
       } else {
         // Snap to exact targets
         this.x = target.x
@@ -215,14 +233,15 @@ export class Viewport extends Container {
         this._zoom = target.zoom
         this.scale.set(this._zoom)
         this.onZoomChange?.(this._zoom)
-        this._animationId = null
-        this._springX = null
-        this._springY = null
-        this._springZoom = null
+        this._stopAnimation()
+        this.onActivity?.()
       }
     }
 
-    this._animationId = requestAnimationFrame(tick)
+    this._tickerStep = (ticker) => {
+      tick(ticker.deltaMS / 1000)
+    }
+    this._resolveTicker().add(this._tickerStep)
   }
 
   /**
@@ -241,19 +260,21 @@ export class Viewport extends Container {
     this.x = 0
     this.y = 0
     this.onZoomChange?.(this._zoom)
+    this.onActivity?.()
   }
 
   /**
    * Remove all DOM event listeners. Call when destroying the renderer.
    */
   cleanup(): void {
-    if (this._animationId !== null) {
-      cancelAnimationFrame(this._animationId)
-      this._animationId = null
-    }
+    this._stopAnimation()
     this._springX = null
     this._springY = null
     this._springZoom = null
+    if (this._isPanning) {
+      this._isPanning = false
+      this.onPanStateChange?.(false)
+    }
 
     if (this._canvas && this._onWheel) {
       this._canvas.removeEventListener('wheel', this._onWheel)
@@ -268,6 +289,7 @@ export class Viewport extends Container {
     this._onWheel = null
     this._onPointerMove = null
     this._onPointerUp = null
+    this._ticker = null
   }
 
   // ── private ──────────────────────────────────────────────
@@ -286,5 +308,23 @@ export class Viewport extends Container {
     this._zoom = newZoom
     this.scale.set(newZoom)
     this.onZoomChange?.(this._zoom)
+    this.onActivity?.()
+  }
+
+  private _stopAnimation(): void {
+    if (this._tickerStep) {
+      this._resolveTicker().remove(this._tickerStep)
+      this._tickerStep = null
+    }
+    if (this._springX || this._springY || this._springZoom) {
+      this._springX = null
+      this._springY = null
+      this._springZoom = null
+      this.onAnimationStateChange?.(false)
+    }
+  }
+
+  private _resolveTicker(): Ticker {
+    return this._ticker ?? Ticker.shared
   }
 }

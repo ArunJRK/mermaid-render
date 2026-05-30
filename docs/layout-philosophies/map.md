@@ -6,7 +6,7 @@
 
 The diagram is a landscape. There's no single reading direction — the viewer surveys the whole thing, then zooms into regions of interest. Groups are the primary unit of meaning. The connections between groups matter more than the sequence within them.
 
-Think: information architecture, service maps, system overviews, org charts, microservice topologies, dependency graphs.
+Today, think: information architecture, service maps, system overviews, org-chart-like layouts, microservice topologies, and dependency graphs expressed in `flowchart` syntax.
 
 ## Gestalt Principles
 
@@ -55,10 +55,10 @@ Curved lines, naturally avoid crossing due to force positioning. Edge bundling b
 
 - Information architecture diagrams
 - Service blueprints and service maps
-- System overview / C4 Context diagrams
 - Microservice topologies
 - Dependency graphs
 - Org charts and team maps
+- Future system overview / C4 Context-style diagrams once parser scope expands
 - Any diagram where "what are the main areas?" is the first question
 
 ## When NOT To Use

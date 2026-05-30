@@ -1,6 +1,7 @@
 export { MermaidRenderer } from './renderer/mermaid-renderer'
 export { buildGraph } from './parser/graph-builder'
 export { extractDirectives } from './parser/directive-extractor'
+export { createVirtualFileResolver, normalizeDiagramPath } from './linking/virtual-file-resolver'
 export { DagreLayout } from './layout/dagre-layout'
 export { BlueprintLayout } from './layout/blueprint-layout'
 export { LoadPipeline } from './renderer/load-pipeline'

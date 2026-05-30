@@ -58,10 +58,28 @@ describe('LoadPipeline', () => {
     const first = pipeline.load('graph TD\n    A --> B')
     const second = pipeline.load('graph TD\n    X --> Y')
 
-    const [firstResult, secondResult] = await Promise.all([first, second])
+    const [, secondResult] = await Promise.all([first, second])
 
     // Only second should succeed, first should be cancelled
     expect(secondResult.success).toBe(true)
     expect(secondResult.positioned!.nodes.has('X')).toBe(true)
+  })
+
+  it('warns when a graph exceeds the verified interactive stress floor', async () => {
+    const pipeline = new LoadPipeline()
+    const nodeCount = 221
+    const lines = ['graph TD']
+
+    for (let index = 0; index < nodeCount; index += 1) {
+      lines.push(`    N${index}[Node ${index}]`)
+    }
+    for (let index = 0; index < nodeCount - 1; index += 1) {
+      lines.push(`    N${index} --> N${index + 1}`)
+    }
+
+    const result = await pipeline.load(lines.join('\n'))
+
+    expect(result.success).toBe(true)
+    expect(result.warnings?.some((warning) => warning.code === 'PERF_STRESS_THRESHOLD')).toBe(true)
   })
 })

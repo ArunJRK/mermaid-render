@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { detectCrossings, type WireSegment } from '../wire-hops'
+import { detectCrossings, type WireSegment } from '../wire-crossings'
 
 function seg(
   edgeId: string,

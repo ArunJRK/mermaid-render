@@ -98,4 +98,16 @@ graph TD
     expect(result.directives).toHaveLength(0)
     expect(result.cleanedSource).toBe(source)
   })
+
+  it('surfaces malformed @link directives as warnings', () => {
+    const source = `%% @link broken ->>
+graph TD
+    A --> B`
+
+    const result = extractDirectives(source)
+
+    expect(result.directives).toHaveLength(0)
+    expect(result.warnings).toHaveLength(1)
+    expect(result.warnings[0].code).toBe('LINK_DIRECTIVE_INVALID')
+  })
 })

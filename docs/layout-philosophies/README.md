@@ -1,17 +1,17 @@
 # Layout Philosophies
 
-A layout philosophy is an opinionated set of rules for how a diagram should look and feel. Each philosophy applies Gestalt principles differently to serve a different reading intent.
+A layout philosophy is an opinionated rendering preset. In the current v1 web scope, only two philosophies have dedicated layout engines. The others are visual/spacing presets layered on the generic Dagre engine.
 
 ## Available Philosophies
 
 | Philosophy | Intent | Best For |
 |------------|--------|----------|
-| [Narrative](narrative.md) | Read like a story | Flowcharts, decision trees, user journeys |
-| [Map](map.md) | See the territory at a glance | Information architecture, service maps, system overviews |
-| [Blueprint](blueprint.md) | Precise, technical, aligned | Class diagrams, ER diagrams, C4 component level |
-| [Breath](breath.md) | Space to think | Presentations, stakeholder diagrams, conceptual overviews |
-| [Radial](radial.md) | Mind map, central concept radiates outward | Dependency trees, knowledge graphs, API surface maps |
-| [Mosaic](mosaic.md) | Cards on a wall, no lines | Service catalogs, capability maps, inventories |
+| [Narrative](narrative.md) | Dedicated engine | Read like a story | Flowcharts, decision trees, user journeys |
+| [Blueprint](blueprint.md) | Dedicated engine | Precise, technical, aligned | Technical flowcharts today; future fit includes class/ER/C4-style diagrams once parser scope expands |
+| [Map](map.md) | Theme + Dagre fallback | See the territory at a glance | Experimental v1 preset |
+| [Breath](breath.md) | Theme + Dagre fallback | Space to think | Experimental v1 preset |
+| [Radial](radial.md) | Theme + Dagre fallback | Central concept radiates outward | Experimental v1 preset |
+| [Mosaic](mosaic.md) | Theme + Dagre fallback | Cards on a wall | Experimental v1 preset |
 
 ## Usage
 
@@ -27,24 +27,16 @@ Or programmatically:
 renderer.load(source, { layout: 'narrative' })
 ```
 
-If no philosophy is specified, the renderer picks a default based on diagram type (flowchart → narrative, class → blueprint, etc.).
+If no philosophy is specified, the renderer currently defaults to `narrative`.
 
-## Manual Overrides
+## Notes
 
-Every philosophy supports manual overrides that sit on top of the auto-layout:
-
-- **Nudge** — drag a node to adjust position after auto-layout
-- **Pin** — lock a node so auto-layout works around it (`%% @pin nodeId x y`)
-- **Rank hints** — force nodes to the same level (`%% @rank nodeA nodeB nodeC`)
-- **Spacing multiplier** — global knob to tighten or loosen (`%% @spacing 1.5`)
+- `%% @pin` and `%% @rank` are parsed, but they are not yet enforced as visual layout constraints in the renderer.
+- The dedicated v1 layout behavior lives in [packages/core/src/layout](/Volumes/Lake/Projects/ArunJRK/mermaid-render/packages/core/src/layout).
+- The fallback philosophies remain documented here as design targets, not as fully delivered runtime guarantees.
+- Parser/runtime scope is narrower than the philosophy intent language: current v1 shipping support is `flowchart` syntax only. References to class diagrams, ER diagrams, state diagrams, or C4 here describe future fit, not current parser compatibility.
+- Collision guarantees are philosophy-specific: only `blueprint` promises collision-aware orthogonal routing. The others may still draw through unrelated nodes and should not be described as obstacle-free.
 
 ## Contributing a Philosophy
 
-Each philosophy is a single file in this directory. To add a new one:
-
-1. Create a new markdown file (e.g., `your-philosophy.md`)
-2. Follow the structure of existing files: Intent, Gestalt Principles, Layout Rules, Edge Routing, Spacing, When To Use
-3. Implement the corresponding layout preset in `packages/core/src/layout/philosophies/`
-4. Add it to this README
-
-Philosophies should be opinionated. The goal is not to expose every knob — it's to make diagrams that communicate well by default, so users don't have to fight the layout engine.
+Add a new philosophy only after there is a matching runtime implementation, not just a theme spec. Public docs should describe shipped behavior, not planned behavior.

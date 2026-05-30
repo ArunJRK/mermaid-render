@@ -4,6 +4,7 @@ import { DagreLayout } from './dagre-layout'
 import type {
   RenderGraph,
   RenderEdge,
+  RenderNode,
   PositionedGraph,
   PositionedNode,
   PositionedEdge,
@@ -119,8 +120,7 @@ export class NarrativeLayout implements LayoutEngine {
           break
       }
 
-      const width = computeNodeWidth(node.label, cfg.nodeMinWidth, cfg.nodePadding)
-      const height = cfg.nodeMinHeight
+      const { width, height } = this._nodeSize(node)
 
       positionedNodes.set(id, {
         ...node,
@@ -362,10 +362,11 @@ export class NarrativeLayout implements LayoutEngine {
     g.setDefaultEdgeLabel(() => ({}))
 
     for (const [id, node] of graph.nodes) {
+      const size = this._nodeSize(node)
       g.setNode(id, {
         label: node.label,
-        width: computeNodeWidth(node.label, cfg.nodeMinWidth, cfg.nodePadding),
-        height: cfg.nodeMinHeight,
+        width: size.width,
+        height: size.height,
       })
     }
 
@@ -456,30 +457,75 @@ export class NarrativeLayout implements LayoutEngine {
     const m = this.multiplier
     const padding = 30 * m
 
-    for (const [sgId, sg] of graph.subgraphs) {
-      const memberNodes = sg.nodeIds
-        .map((id) => positionedNodes.get(id))
-        .filter((n): n is PositionedNode => n !== undefined)
+    const pending = new Set(graph.subgraphs.keys())
+    while (pending.size > 0) {
+      let progressed = false
 
-      if (memberNodes.length === 0) continue
+      for (const sgId of Array.from(pending)) {
+        const sg = graph.subgraphs.get(sgId)!
+        const memberNodes = sg.nodeIds
+          .map((id) => positionedNodes.get(id))
+          .filter((n): n is PositionedNode => n !== undefined)
+        const childSubgraphs = sg.nodeIds
+          .map((id) => positionedSubgraphs.get(id))
+          .filter((subgraph): subgraph is PositionedSubgraph => subgraph !== undefined)
+        const unresolvedChildren = sg.nodeIds
+          .filter((id) => graph.subgraphs.has(id) && !positionedSubgraphs.has(id))
 
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
-      for (const node of memberNodes) {
-        minX = Math.min(minX, node.x - node.width / 2)
-        minY = Math.min(minY, node.y - node.height / 2)
-        maxX = Math.max(maxX, node.x + node.width / 2)
-        maxY = Math.max(maxY, node.y + node.height / 2)
+        if (memberNodes.length === 0 && childSubgraphs.length === 0) {
+          pending.delete(sgId)
+          progressed = true
+          continue
+        }
+
+        if (unresolvedChildren.length > 0) continue
+
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+        for (const node of memberNodes) {
+          minX = Math.min(minX, node.x - node.width / 2)
+          minY = Math.min(minY, node.y - node.height / 2)
+          maxX = Math.max(maxX, node.x + node.width / 2)
+          maxY = Math.max(maxY, node.y + node.height / 2)
+        }
+        for (const subgraph of childSubgraphs) {
+          minX = Math.min(minX, subgraph.x - subgraph.width / 2)
+          minY = Math.min(minY, subgraph.y - subgraph.height / 2)
+          maxX = Math.max(maxX, subgraph.x + subgraph.width / 2)
+          maxY = Math.max(maxY, subgraph.y + subgraph.height / 2)
+        }
+
+        positionedSubgraphs.set(sgId, {
+          ...sg,
+          x: (minX + maxX) / 2,
+          y: (minY + maxY) / 2,
+          width: maxX - minX + padding * 2,
+          height: maxY - minY + padding * 2 + 20,
+        })
+        pending.delete(sgId)
+        progressed = true
       }
 
-      positionedSubgraphs.set(sgId, {
-        ...sg,
-        x: (minX + maxX) / 2,
-        y: (minY + maxY) / 2,
-        width: maxX - minX + padding * 2,
-        height: maxY - minY + padding * 2 + 20,
-      })
+      if (!progressed) break
     }
 
     return positionedSubgraphs
+  }
+
+  private _nodeSize(node: RenderNode): { width: number; height: number } {
+    let width = computeNodeWidth(node.label, this.config.nodeMinWidth, this.config.nodePadding)
+    let height = this.config.nodeMinHeight
+
+    if (node.shape === 'diamond') {
+      width = Math.ceil(width * 1.35)
+      height = Math.ceil(height * 1.25)
+    } else if (node.shape === 'circle') {
+      const diameter = Math.max(width, height)
+      width = diameter
+      height = diameter
+    } else if (node.shape === 'hexagon') {
+      width = Math.ceil(width * 1.15)
+    }
+
+    return { width, height }
   }
 }

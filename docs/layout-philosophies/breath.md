@@ -6,7 +6,7 @@
 
 The diagram is for an audience that needs to grasp the big picture quickly — often non-technical stakeholders, executives, or anyone seeing this for the first time. The whitespace isn't wasted space — it's the most important design element. It says "this is simple, don't be intimidated."
 
-Think: presentations, stakeholder reviews, C4 Context diagrams, conceptual overviews, onboarding docs, README diagrams.
+Today, think: presentations, stakeholder reviews, conceptual overviews, onboarding docs, and README diagrams expressed in `flowchart` syntax. C4 Context-style usage is future fit, not current parser support.
 
 ## Gestalt Principles
 
@@ -60,10 +60,10 @@ Maximum whitespace. Designed for projection/sharing. Readable from across the ro
 ## When To Use
 
 - Presentations and slide decks
-- C4 Context level diagrams
 - Stakeholder-facing overviews
 - README and documentation hero diagrams
 - First-time viewer onboarding
+- Future C4 Context-style diagrams once parser scope expands
 - Any diagram where "I get the gist in 5 seconds" is the goal
 
 ## When NOT To Use
