@@ -249,7 +249,10 @@ declare global {
   }
 }
 
-const RAW_EXAMPLES = import.meta.glob('../../../examples/**/*.mmd', {
+const RAW_EXAMPLES = import.meta.glob([
+  '../../../examples/**/*.mmd',
+  '!../../../examples/blueprint-classes.mmd',
+], {
   query: '?raw',
   import: 'default',
 }) as Record<string, () => Promise<string>>
@@ -267,7 +270,6 @@ const EXAMPLE_LOADERS = new Map<string, () => Promise<string>>(
     .sort(([a], [b]) => a.localeCompare(b)),
 )
 const DEMO_VISIBLE_EXAMPLES = Array.from(EXAMPLE_LOADERS.keys())
-  .filter((path) => path !== '/examples/blueprint-classes.mmd')
 const fileCache = new Map<string, string>()
 const fileInflight = new Map<string, Promise<string | null>>()
 const fileOverrides = new Map<string, { source: string; delayMs: number }>()

@@ -642,6 +642,27 @@ test.describe('demo render pipeline', () => {
     expect(pageErrors).toEqual([])
   })
 
+  test('renders a stable mobile screenshot for README/docs use', async ({ page }) => {
+    const pageErrors = await attachPageErrorTracking(page)
+    await waitForDevApi(page)
+
+    await page.evaluate(async () => {
+      await window.__MERMAID_DEV__!.loadFile('/examples/microservice/overview.mmd')
+      window.__MERMAID_DEV__!.fitToView()
+    })
+
+    await page.setViewportSize({ width: 390, height: 844 })
+
+    await expect.poll(async () => (await snapshot(page)).currentFile).toBe('/examples/microservice/overview.mmd')
+    await expect.poll(async () => (await snapshot(page)).currentLayout).toBe('narrative')
+    await expect.poll(async () => (await snapshot(page)).viewportAlpha).toBe(1)
+    await page.waitForTimeout(180)
+
+    const mobileShell = await page.screenshot()
+    expect(mobileShell).toMatchSnapshot('readme-mobile-responsive.png')
+    expect(pageErrors).toEqual([])
+  })
+
   test('keeps shipped example graphs and the stress graph free of node-on-node overlap', async ({ page }) => {
     const pageErrors = await attachPageErrorTracking(page)
     await waitForDevApi(page)
@@ -861,6 +882,9 @@ test.describe('demo render pipeline', () => {
     for (const metric of shapesToCheck) {
       expect(labelContainedByShape(metric)).toBeTruthy()
     }
+
+    const canvas = page.locator('#canvas')
+    await expect(canvas).toHaveScreenshot('nonrectangular-label-fit.png')
 
     expect(pageErrors).toEqual([])
   })
@@ -2773,6 +2797,12 @@ graph TD
       return nodes.find((node) => node.id === 'bad')!
     })
     expect(brokenNode.badgeKind).toBe('broken')
+
+    const nodeBounds = await page.evaluate(() => window.__MERMAID_DEV__!.getNodeScreenBounds('bad'))
+    expect(nodeBounds).not.toBeNull()
+    const clipped = await page.screenshot({ clip: expandClip(nodeBounds!) })
+    expect(clipped).toMatchSnapshot('broken-link-missing-fragment.png')
+
     expect(pageErrors).toEqual([])
   })
 
@@ -2796,6 +2826,10 @@ graph TD
     expect(state.statusMessage).toContain('Malformed @link directive ignored')
     expect(nodeMetrics.some((node) => node.id === 'bad')).toBe(true)
     expect(nodeMetrics.find((node) => node.id === 'bad')?.badgeKind).toBeNull()
+
+    const canvas = page.locator('#canvas')
+    await expect(canvas).toHaveScreenshot('malformed-link-warning-state.png')
+
     expect(pageErrors).toEqual([])
   })
 
@@ -2840,6 +2874,10 @@ graph TD
     expect(afterClick.statusLevel).toBe('warn')
     expect(afterClick.statusMessage).toContain('outside the configured resolver scope')
     expect(fetchCount).toBe(0)
+
+    const canvas = page.locator('#canvas')
+    await expect(canvas).toHaveScreenshot('out-of-scope-link-warning-state.png')
+
     expect(pageErrors).toEqual([])
   })
 
@@ -3033,6 +3071,30 @@ graph TD
     expect(pageErrors).toEqual([])
   })
 
+  test('renders visibly through WebGL when the WebGPU API exists but no adapter is available', async ({ page }) => {
+    const pageErrors = await attachPageErrorTracking(page)
+    await page.goto('/lifecycle-harness.html')
+    await page.waitForFunction(() => Boolean((window as any).__LIFECYCLE_HARNESS__))
+
+    const probe = await page.evaluate(async (): Promise<{ mountSucceeded: boolean, backend: string | null, nodeCount: number, requestAdapterCalls: number, canvasId: string }> => {
+      return await (window as any).__LIFECYCLE_HARNESS__.runAdapterFallbackVisualProbe()
+    })
+
+    expect(probe.mountSucceeded).toBe(true)
+    expect(probe.requestAdapterCalls).toBeGreaterThan(0)
+    expect(probe.backend).toBe('WebGL')
+    expect(probe.nodeCount).toBeGreaterThan(0)
+
+    const canvas = page.locator(`#${probe.canvasId}`)
+    await expect(canvas).toHaveScreenshot('webgpu-no-adapter-webgl-fallback.png')
+
+    await page.evaluate(() => {
+      ;(window as any).__LIFECYCLE_HARNESS__.cleanupAdapterFallbackVisualProbe()
+    })
+
+    expect(pageErrors).toEqual([])
+  })
+
   test('pauses and resumes the ticker on visibility changes', async ({ page }) => {
     const pageErrors = await attachPageErrorTracking(page)
     await page.goto('/lifecycle-harness.html')
@@ -3075,6 +3137,10 @@ graph TD
     expect(probe.mountError).toContain('Rendering unavailable')
     expect(probe.mountError).toContain('Simulated renderer init failure')
     expect(probe.sampledAlphaSum).toBeGreaterThan(0)
+
+    const canvas = page.locator('#canvas')
+    await expect(canvas).toHaveScreenshot('renderer-init-failure-fallback.png')
+
     expect(pageErrors).toEqual([])
   })
 
@@ -3089,6 +3155,10 @@ graph TD
     expect(probe.mountError).toContain('Rendering unavailable')
     expect(probe.mountError).toContain('No supported GPU backend')
     expect(probe.sampledAlphaSum).toBeGreaterThan(0)
+
+    const canvas = page.locator('#canvas')
+    await expect(canvas).toHaveScreenshot('no-gpu-backend-fallback.png')
+
     expect(pageErrors).toEqual([])
   })
 
@@ -3109,6 +3179,10 @@ graph TD
 
     const state = await snapshot(page)
     expect(state.statusMessage.length).toBeGreaterThan(0)
+
+    const canvas = page.locator('#canvas')
+    await expect(canvas).toHaveScreenshot('invalid-mermaid-error-state.png')
+
     expect(pageErrors).toEqual([])
   })
 

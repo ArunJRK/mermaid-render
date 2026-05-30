@@ -43,6 +43,10 @@ type AdapterFallbackResult = {
   requestAdapterCalls: number
 }
 
+type AdapterFallbackVisualResult = AdapterFallbackResult & {
+  canvasId: string
+}
+
 type WebGpuRecoveryResult = {
   done: boolean
   error: string | null
@@ -63,6 +67,8 @@ declare global {
       runVisibilityPauseProbe(): Promise<VisibilityPauseResult>
       runIdlePauseProbe(): Promise<IdlePauseResult>
       runAdapterFallbackProbe(): Promise<AdapterFallbackResult>
+      runAdapterFallbackVisualProbe(): Promise<AdapterFallbackVisualResult>
+      cleanupAdapterFallbackVisualProbe(): void
       startWebGpuRecoveryProbe(): void
       getWebGpuRecoveryProbe(): WebGpuRecoveryResult | null
     }
@@ -71,6 +77,8 @@ declare global {
 
 const statusEl = document.getElementById('status') as HTMLPreElement
 let webGpuRecoveryProbe: WebGpuRecoveryResult | null = null
+let adapterFallbackVisualRenderer: MermaidRenderer | null = null
+let adapterFallbackVisualGpuDescriptor: PropertyDescriptor | null = null
 
 function setStatus(message: string) {
   statusEl.textContent = message
@@ -425,6 +433,74 @@ window.__LIFECYCLE_HARNESS__ = {
       if (originalGpuDescriptor) {
         Object.defineProperty(navigator, 'gpu', originalGpuDescriptor)
       }
+    }
+  },
+  async runAdapterFallbackVisualProbe(): Promise<AdapterFallbackVisualResult> {
+    adapterFallbackVisualRenderer?.destroy()
+    adapterFallbackVisualRenderer = null
+    if (adapterFallbackVisualGpuDescriptor) {
+      Object.defineProperty(navigator, 'gpu', adapterFallbackVisualGpuDescriptor)
+      adapterFallbackVisualGpuDescriptor = null
+    }
+
+    const originalGpuDescriptor = Object.getOwnPropertyDescriptor(navigator, 'gpu')
+    adapterFallbackVisualGpuDescriptor = originalGpuDescriptor ?? null
+    let requestAdapterCalls = 0
+    try {
+      Object.defineProperty(navigator, 'gpu', {
+        configurable: true,
+        value: {
+          async requestAdapter() {
+            requestAdapterCalls += 1
+            return null
+          },
+        },
+      })
+    } catch {
+      // ignore if the browser does not let us override this property
+    }
+
+    const canvasA = document.getElementById('canvas-a') as HTMLCanvasElement
+    const renderer = new MermaidRenderer()
+    adapterFallbackVisualRenderer = renderer
+    const source = `graph TD
+      A[Start] --> B[Done]`
+
+    try {
+      await withTimeout(renderer.mount(canvasA), 'adapter fallback visual mount')
+      await withTimeout(renderer.load(source), 'adapter fallback visual load')
+      const app = (renderer as any)._app as { renderer?: { type?: number } } | null
+      const backend = app?.renderer?.type === 0x1
+        ? 'WebGL'
+        : app?.renderer?.type === 0x2
+          ? 'WebGPU'
+          : null
+      const nodeCount = (renderer as any)._nodeSprites.size as number
+      const result = {
+        mountSucceeded: true,
+        backend,
+        nodeCount,
+        requestAdapterCalls,
+        canvasId: 'canvas-a',
+      }
+      setStatus(JSON.stringify(result, null, 2))
+      return result
+    } catch (error) {
+      renderer.destroy()
+      adapterFallbackVisualRenderer = null
+      if (adapterFallbackVisualGpuDescriptor) {
+        Object.defineProperty(navigator, 'gpu', adapterFallbackVisualGpuDescriptor)
+        adapterFallbackVisualGpuDescriptor = null
+      }
+      throw error
+    }
+  },
+  cleanupAdapterFallbackVisualProbe(): void {
+    adapterFallbackVisualRenderer?.destroy()
+    adapterFallbackVisualRenderer = null
+    if (adapterFallbackVisualGpuDescriptor) {
+      Object.defineProperty(navigator, 'gpu', adapterFallbackVisualGpuDescriptor)
+      adapterFallbackVisualGpuDescriptor = null
     }
   },
   startWebGpuRecoveryProbe(): void {

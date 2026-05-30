@@ -40,6 +40,12 @@ The following philosophy names currently map to theme/spacing presets on top of 
 
 The parser/runtime does **not** currently ship production support for Mermaid `classDiagram`, `stateDiagram`, or `C4` syntax. Any docs that mention those diagram families as a long-term fit for a philosophy are design intent, not a v1 compatibility claim.
 
+Routing guarantees are philosophy-specific:
+
+- `blueprint` is the only shipped philosophy with collision-aware routing
+- `narrative` trims edges to node boundaries and applies limited straight-line avoidance, but it does not guarantee obstacle-free routing
+- `map`, `breath`, `radial`, and `mosaic` are visual presets on Dagre and should not be treated as collision-free routers
+
 ## Embed
 
 ```ts

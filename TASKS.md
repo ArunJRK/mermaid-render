@@ -8,7 +8,7 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
 
 ## Latest Resume Notes
 
-- The current Playwright browser suite is green at `74` tests.
+- The current Playwright browser suite is green at `78` tests.
 - The current full release gate is green on this tree:
   - `pnpm verify:core`
   - lint, typecheck, unit tests, browser tests, core build, demo build, bundle check, and `npm pack --dry-run` all passed together
@@ -68,10 +68,33 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
   - `docs/assets/readme-overview-narrative.png`
   - `docs/assets/readme-blueprint-simple-flow.png`
   - `docs/assets/readme-mobile-responsive.png`
-- Matching browser snapshot coverage now exists for the two README-specific desktop shots:
+- Matching browser snapshot coverage now exists for all three README-facing shots:
   - `readme-overview-narrative-chromium-darwin.png`
   - `readme-blueprint-simple-flow-chromium-darwin.png`
+  - `readme-mobile-responsive-chromium-darwin.png`
+- `goal.md` item 15 now also has a committed browser snapshot artifact:
+  - `nonrectangular-label-fit-chromium-darwin.png`
+- `goal.md` item 6 now also has a committed browser snapshot artifact:
+  - `invalid-mermaid-error-state-chromium-darwin.png`
+- `goal.md` items 42 and the generic renderer-init fallback path now also have committed browser snapshot artifacts:
+  - `renderer-init-failure-fallback-chromium-darwin.png`
+  - `no-gpu-backend-fallback-chromium-darwin.png`
+- `goal.md` item 34 now also has a committed browser snapshot artifact for the broken-fragment case:
+  - `broken-link-missing-fragment-chromium-darwin.png`
+- `goal.md` item 34 now also has a committed browser snapshot artifact for the malformed-directive warning state:
+  - `malformed-link-warning-state-chromium-darwin.png`
+- `goal.md` item 36 now also has a committed browser snapshot artifact for the out-of-scope trust-boundary warning state:
+  - `out-of-scope-link-warning-state-chromium-darwin.png`
+- `goal.md` item 43 now also has a committed browser snapshot artifact for the successful WebGL render after no-adapter fallback:
+  - `webgpu-no-adapter-webgl-fallback-chromium-darwin.png`
+- `goal.md` item 58 enforcement is now stronger at the source level:
+  - `packages/core/src/renderer/__tests__/theme-literals.test.ts` now recurses through the full renderer tree instead of scanning only top-level `src/renderer/*.ts`
+- `goal.md` item 51 is now stated explicitly in the public README, not only in deeper technical docs:
+  - `blueprint` is the only shipped collision-aware router
+  - `narrative` is limited/best-effort, not obstacle-free
+  - `map`, `breath`, `radial`, and `mosaic` are visual presets, not collision-free routers
 - `examples/blueprint-classes.mmd` was removed from the visible demo example list for that reason; this is a scope correction, not a parser fix.
+- `examples/blueprint-classes.mmd` is now also excluded from the demo import glob itself, so the unsupported file no longer ships as a lazy demo asset either.
 - Blueprint routing now reserves rendered long-label node footprints, not only raw layout widths.
 - Blueprint routing now guarantees a visible fallback wire when A* cannot find a path, and reports that state via `RouteResult.congested` instead of silently dropping the edge.
 - Blueprint routing order is now deterministic by stable edge-id ordering instead of depending on input edge order.
@@ -95,9 +118,9 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
 - The runtime no longer carries a second dormant animation subsystem:
   - `packages/core/src/renderer/layout-animator.ts` and its dedicated tests were removed
   - viewport motion, relayout fade, and in-place relayout motion now all live on the shipped Pixi ticker path
-- Latest measured browser perf from the full `74`-test run:
-  - representative: `7` nodes / `6` edges, `loadMs ≈ 77.3`, `avgFrameMs ≈ 10.86`, `p95FrameMs ≈ 9.10`, `approxFps ≈ 92.08`
-  - stress: `220` nodes / `294` edges, `loadMs ≈ 225.6`, `avgFrameMs ≈ 9.59`, `p95FrameMs ≈ 24.30`, `approxFps ≈ 104.24`
+- Latest measured browser perf from the full `78`-test run:
+  - representative: `7` nodes / `6` edges, `loadMs ≈ 71.4`, `avgFrameMs ≈ 10.64`, `p95FrameMs ≈ 9.30`, `approxFps ≈ 93.94`
+  - stress: `220` nodes / `294` edges, `loadMs ≈ 237.7`, `avgFrameMs ≈ 9.52`, `p95FrameMs ≈ 16.70`, `approxFps ≈ 105.00`
 
 ## Current Local State
 
@@ -485,8 +508,10 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
      - surfaces a readable `outside the configured resolver scope` warning in the demo UI/runtime
      - returns `false` from click navigation
      - does not trigger any raw `window.fetch(...)` call
+     - the visible out-of-scope warning state is now also pinned by a committed canvas snapshot:
+       - `packages/core/tests/browser/render.spec.ts-snapshots/out-of-scope-link-warning-state-chromium-darwin.png`
    - verified with:
-     - `pnpm --filter @mermaid-render/core exec playwright test -g "rejects out-of-scope link targets without raw fetch and surfaces the broken state"` → passed
+     - `pnpm --filter @mermaid-render/core exec playwright test -g "rejects out-of-scope link targets without raw fetch and surfaces the broken state" --update-snapshots` → passed
 
 25. `goal.md` item 30 now has stronger direct browser proof for the stale-sprite/orphan half of the contract:
    - `packages/core/dev/main.ts`
@@ -777,6 +802,8 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
      - when `navigator.gpu` exists but `requestAdapter()` returns `null`, the renderer still mounts and renders through WebGL
      - the browser suite proves a real GPU backend is active in normal rendering
      - the WebGPU support probe fails fast with explicit constraints instead of hanging when adapters are unavailable
+     - the no-adapter fallback path now also keeps a committed canvas baseline for the successful WebGL render:
+       - `packages/core/tests/browser/render.spec.ts-snapshots/webgpu-no-adapter-webgl-fallback-chromium-darwin.png`
    - item 46:
      - `visibilitychange` pauses and resumes the ticker
      - idle state stops the ticker and pointer activity restarts it
@@ -785,13 +812,17 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
    - `LINK_DIRECTIVE_INVALID` was already covered in parser tests, but is now also proven through the real browser path
    - malformed `%% @link ...` syntax surfaces a readable warning in the harness status UI instead of disappearing into parser-only coverage
    - malformed directives are ignored without crashing the render or creating a bogus broken-link badge on the affected node
+   - the visible warning state is now also pinned by a committed canvas snapshot:
+     - `packages/core/tests/browser/render.spec.ts-snapshots/malformed-link-warning-state-chromium-darwin.png`
    - browser proof now also covers the broken-fragment case against an existing target file:
      - missing target node fragment renders a broken badge
      - click returns `false`
      - status UI surfaces the readable `LINK_TARGET_NODE_NOT_FOUND` warning
+     - the visible broken-fragment badge state is now also pinned by a committed clipped snapshot:
+       - `packages/core/tests/browser/render.spec.ts-snapshots/broken-link-missing-fragment-chromium-darwin.png`
    - verified with:
-     - `pnpm --filter @mermaid-render/core exec playwright test -g "surfaces malformed @link syntax as a readable author warning in the browser harness"`
-     - `pnpm --filter @mermaid-render/core exec playwright test -g "shows broken-link state and readable feedback for missing target-node fragments"`
+     - `pnpm --filter @mermaid-render/core exec playwright test -g "surfaces malformed @link syntax as a readable author warning in the browser harness" --update-snapshots`
+     - `pnpm --filter @mermaid-render/core exec playwright test -g "shows broken-link state and readable feedback for missing target-node fragments" --update-snapshots`
 
 4c. `goal.md` item 38 now has direct runtime/browser proof for the bounded side of preview caching:
    - stale preview invalidation was already covered on reload; the browser harness now also proves the cache bound and eviction behavior directly
@@ -985,6 +1016,39 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
        - `packages/core/tests/browser/render.spec.ts-snapshots/overlap-topmost-selection-chromium-darwin.png`
    - verified with:
      - `pnpm --filter @mermaid-render/core exec playwright test -g "uses the topmost node as the hover target when nodes overlap in screen space|keeps the selected top node above an occluding sibling in overlap state" --update-snapshots`
+
+4u. `goal.md` item 15 now has screenshot-backed browser proof in addition to the existing geometry assertions:
+   - the non-rectangular shape fixture already asserted label containment within rendered `circle`, `diamond`, and `hexagon` shapes
+   - the browser suite now also keeps a committed canvas baseline for that fixture:
+     - `packages/core/tests/browser/render.spec.ts-snapshots/nonrectangular-label-fit-chromium-darwin.png`
+   - verified with:
+     - `pnpm --filter @mermaid-render/core exec playwright test -g "keeps labels inside rendered non-rectangular shapes" --update-snapshots`
+
+4v. `goal.md` item 6 now has screenshot-backed browser proof in addition to the existing runtime assertions:
+   - invalid Mermaid input was already proven to:
+     - fail `loadFile(...)` cleanly
+     - surface `statusLevel = error`
+     - show a readable on-canvas overlay
+   - the browser suite now also keeps a committed canvas baseline for that failure state:
+     - `packages/core/tests/browser/render.spec.ts-snapshots/invalid-mermaid-error-state-chromium-darwin.png`
+   - verified with:
+     - `pnpm --filter @mermaid-render/core exec playwright test -g "shows a readable canvas and UI error state for invalid Mermaid input" --update-snapshots`
+
+4w. `goal.md` item 42 and the related init-failure fallback path now have screenshot-backed browser proof:
+   - the browser runtime already proved both failure paths surface readable fallback canvas states instead of white-screening
+   - the suite now also keeps committed baselines for:
+     - generic renderer init failure:
+       - `packages/core/tests/browser/render.spec.ts-snapshots/renderer-init-failure-fallback-chromium-darwin.png`
+     - explicit no usable GPU backend:
+       - `packages/core/tests/browser/render.spec.ts-snapshots/no-gpu-backend-fallback-chromium-darwin.png`
+   - verified with:
+     - `pnpm --filter @mermaid-render/core exec playwright test -g "shows a readable fallback state when renderer initialization fails|shows a readable fallback state when no usable GPU backend is available" --update-snapshots`
+
+4x. `goal.md` item 58 is now guarded more robustly against regressions:
+   - the renderer tree was already free of semantic hex literals outside `theme.ts` and `fonts.ts`
+   - the enforcing test in `packages/core/src/renderer/__tests__/theme-literals.test.ts` now recurses through the full renderer directory instead of only scanning top-level files
+   - verified with:
+     - `pnpm --filter @mermaid-render/core test -- --run src/renderer/__tests__/theme-literals.test.ts`
 
 5. `goal.md` item 28 now has direct browser proof for the node/preview side of paint order:
    - node internals are now ordered `shape < label < link badge < hover overlay < selection overlay`
@@ -1205,7 +1269,37 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
      - core ESM: `202.28 KiB` (`207136 bytes`)
      - core CJS: `204.57 KiB` (`209479 bytes`)
      - demo entry: `index-CNnJ3N89.js` `478.06 KiB` raw / `137.36 KiB` gzip
-     - dry-run tarball: `mermaid-render-core-0.1.0.tgz`, package size `274.1 kB`
+     - dry-run tarball: `mermaid-render-core-1.0.0.tgz`, package size `274.1 kB`
+
+21. Fresh browser-suite rerun on the current tree is also green after the latest screenshot-proof additions:
+   - `pnpm --filter @mermaid-render/core test:browser` passed
+   - browser suite: `77` passed
+   - this rerun includes the new artifact-backed cases for:
+     - non-rectangular label fit
+     - invalid Mermaid error state
+     - renderer-init failure fallback
+     - no-GPU-backend fallback
+     - broken-link missing-fragment state
+     - malformed `@link` warning state
+     - out-of-scope link warning state
+     - successful WebGL render after WebGPU no-adapter fallback
+   - current measured browser perf from the `77`-test run:
+     - representative: `loadMs ≈ 75.7`, `avgFrameMs ≈ 10.57`, `p95FrameMs ≈ 9.30`, `approxFps ≈ 94.57`
+     - stress: `220` nodes / `294` edges, `loadMs ≈ 251.2`, `avgFrameMs ≈ 9.59`, `p95FrameMs ≈ 24.90`, `approxFps ≈ 104.23`
+
+22. Fresh full-gate rerun is also green after the latest lifecycle-harness and snapshot-proof additions:
+   - `pnpm verify:core` passed end to end
+   - unit suite: `140` passed
+   - browser suite: `77` passed
+   - built static demo smoke: passed
+   - current measured browser perf from the full-gate browser run:
+     - representative: `loadMs ≈ 73.9`, `avgFrameMs ≈ 10.50`, `p95FrameMs ≈ 9.30`, `approxFps ≈ 95.22`
+     - stress: `220` nodes / `294` edges, `loadMs ≈ 251.2`, `avgFrameMs ≈ 9.38`, `p95FrameMs ≈ 16.70`, `approxFps ≈ 106.57`
+   - current packaged/build artifact checks from that same run:
+     - core ESM: `201.36 KiB` (`206192 bytes`)
+     - core CJS: `203.65 KiB` (`208541 bytes`)
+     - demo entry: `index-CNnJ3N89.js` `489.53 KiB` raw (`489536 bytes`) / `137.36 KiB` gzip (`140657 bytes`)
+     - dry-run tarball: `mermaid-render-core-1.0.0.tgz`, package size `274.4 kB`
 
 ## Resume Notes
 
