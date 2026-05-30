@@ -859,11 +859,15 @@ test.describe('demo render pipeline', () => {
     const maxState = await snapshot(page)
     expect(maxZoom).toBe(5)
     expect(maxState.viewportScale).toBe(5)
+    const maxZoomCanvas = await page.locator('#canvas').screenshot()
+    expect(maxZoomCanvas).toMatchSnapshot('zoom-clamp-max.png')
 
     const minZoom = await page.evaluate(() => window.__MERMAID_DEV__!.setRelativeZoom(0.0001))
     const minState = await snapshot(page)
     expect(minZoom).toBe(0.1)
     expect(minState.viewportScale).toBe(0.1)
+    const minZoomCanvas = await page.locator('#canvas').screenshot()
+    expect(minZoomCanvas).toMatchSnapshot('zoom-clamp-min.png')
     expect(pageErrors).toEqual([])
   })
 
@@ -942,10 +946,21 @@ test.describe('demo render pipeline', () => {
     expect(hoveredNode!.hoverBounds.height).toBeGreaterThanOrEqual(hoveredNode!.shapeBounds.height - 1)
     expect(hoveredNode!.hoverBounds.x).toBeLessThanOrEqual(hoveredNode!.shapeBounds.x + 1)
     expect(hoveredNode!.hoverBounds.y).toBeLessThanOrEqual(hoveredNode!.shapeBounds.y + 1)
+    const hoveredNodeBounds = await page.evaluate(() => window.__MERMAID_DEV__!.getNodeScreenBounds('OrderSvc'))
+    expect(hoveredNodeBounds).not.toBeNull()
 
     const canvas = page.locator('#canvas')
     const box = await canvas.boundingBox()
     expect(box).not.toBeNull()
+    const hoverShot = await page.screenshot({
+      clip: {
+        x: Math.max(0, hoveredNodeBounds!.x - 24),
+        y: Math.max(0, hoveredNodeBounds!.y - 24),
+        width: hoveredNodeBounds!.width + 48,
+        height: hoveredNodeBounds!.height + 48,
+      },
+    })
+    expect(hoverShot).toMatchSnapshot('hover-glow-expanded-bounds.png')
     await page.mouse.move(box!.x + 8, box!.y + 8)
 
     await expect.poll(async () => {
@@ -990,6 +1005,8 @@ test.describe('demo render pipeline', () => {
       expect(angleDelta(edge.arrowAngle!, finalAngle)).toBeLessThanOrEqual(0.02)
     }
 
+    await expect(page.locator('#canvas')).toHaveScreenshot('edge-endpoints-boundary-simple-flow.png')
+
     expect(pageErrors).toEqual([])
   })
 
@@ -1008,6 +1025,7 @@ test.describe('demo render pipeline', () => {
     expect(state.statusMessage).toContain('Collision-free routing is only guaranteed for blueprint')
     expect(state.nodeCount).toBe(3)
     expect(state.edgeCount).toBe(1)
+    await expect(page.locator('#canvas')).toHaveScreenshot('nonblueprint-crossing-warning-state.png')
     expect(pageErrors).toEqual([])
   })
 
@@ -1035,6 +1053,7 @@ test.describe('demo render pipeline', () => {
     ))
 
     expect(intersectsBlocker).toBe(false)
+    await expect(page.locator('#canvas')).toHaveScreenshot('blueprint-rendered-footprint-routing.png')
     expect(pageErrors).toEqual([])
   })
 
@@ -1195,6 +1214,10 @@ ${lines.map((line) => `  ${line}`).join('\n')}`, '/__blueprint-deterministic__.m
     expect(state.viewportScale).toBeGreaterThan(0)
     expect(Number.isFinite(state.viewportPosition?.x)).toBeTruthy()
     expect(Number.isFinite(state.viewportPosition?.y)).toBeTruthy()
+
+    const fitCanvas = await page.locator('#canvas').screenshot()
+    expect(fitCanvas).toMatchSnapshot('fit-to-view-reload.png')
+
     expect(pageErrors).toEqual([])
   })
 
@@ -1266,6 +1289,10 @@ ${lines.map((line) => `  ${line}`).join('\n')}`, '/__blueprint-deterministic__.m
     expect(recoveredBounds!.y + recoveredBounds!.height).toBeGreaterThan(canvasBox!.y)
     expect(recoveredBounds!.x).toBeLessThan(canvasBox!.x + canvasBox!.width)
     expect(recoveredBounds!.y).toBeLessThan(canvasBox!.y + canvasBox!.height)
+
+    const recoveredCanvas = await page.locator('#canvas').screenshot()
+    expect(recoveredCanvas).toMatchSnapshot('fit-to-view-recovery.png')
+
     expect(pageErrors).toEqual([])
   })
 
@@ -2060,6 +2087,9 @@ graph TD
   test('invalidates preview cache on reload and uses the target file philosophy', async ({ page }) => {
     const pageErrors = await attachPageErrorTracking(page)
     await waitForDevApi(page)
+    const canvas = page.locator('#canvas')
+    const canvasBox = await canvas.boundingBox()
+    expect(canvasBox).not.toBeNull()
 
     await page.evaluate(() => {
       window.__MERMAID_DEV__!.setPreviewOverride(
@@ -2088,6 +2118,15 @@ graph TD
     expect(firstPreview.nodeLabels).toContain('Preview A')
     expect(new Set(firstPreview.nodeFontFamilies)).toEqual(new Set(['MermaidBlueprint']))
     expect(firstPreview.titleFontFamily).toBe('MermaidBlueprint')
+    const firstPreviewShot = await page.screenshot({
+      clip: {
+        x: Math.max(0, canvasBox!.x + firstPreview.bounds!.x - 16),
+        y: Math.max(0, canvasBox!.y + firstPreview.bounds!.y - 16),
+        width: firstPreview.bounds!.width + 32,
+        height: firstPreview.bounds!.height + 32,
+      },
+    })
+    expect(firstPreviewShot).toMatchSnapshot('preview-target-philosophy-blueprint.png')
 
     await page.evaluate(() => {
       window.__MERMAID_DEV__!.setPreviewOverride(
@@ -2103,9 +2142,6 @@ graph TD
     await page.evaluate(() => window.__MERMAID_DEV__!.loadFile('/examples/cross-file/main.mmd'))
     await expect.poll(async () => (await snapshot(page)).currentFile).toBe('/examples/cross-file/main.mmd')
 
-    const canvas = page.locator('#canvas')
-    const canvasBox = await canvas.boundingBox()
-    expect(canvasBox).not.toBeNull()
     await page.mouse.move(canvasBox!.x + 12, canvasBox!.y + 12)
     await expect.poll(async () => {
       const state = await page.evaluate(() => window.__MERMAID_DEV__!.getPreviewState() as PreviewState)
@@ -2126,6 +2162,15 @@ graph TD
     expect(secondPreview.nodeLabels).not.toContain('Preview A')
     expect(new Set(secondPreview.nodeFontFamilies)).toEqual(new Set(['MermaidNode']))
     expect(secondPreview.titleFontFamily).toBe('MermaidLabel')
+    const secondPreviewShot = await page.screenshot({
+      clip: {
+        x: Math.max(0, canvasBox!.x + secondPreview.bounds!.x - 16),
+        y: Math.max(0, canvasBox!.y + secondPreview.bounds!.y - 16),
+        width: secondPreview.bounds!.width + 32,
+        height: secondPreview.bounds!.height + 32,
+      },
+    })
+    expect(secondPreviewShot).toMatchSnapshot('preview-target-philosophy-breath.png')
 
     await page.evaluate(() => window.__MERMAID_DEV__!.clearPreviewOverrides())
     expect(pageErrors).toEqual([])
@@ -2488,6 +2533,9 @@ graph TD
     await page.evaluate(() => window.__MERMAID_DEV__!.setLayout('blueprint'))
     await expect.poll(async () => (await snapshot(page)).currentLayout).toBe('blueprint')
     await expect.poll(async () => (await snapshot(page)).selectedNodeId).toBeNull()
+
+    const clearedSelectionCanvas = await page.locator('#canvas').screenshot()
+    expect(clearedSelectionCanvas).toMatchSnapshot('selection-cleared-after-rebuild.png')
 
     expect(pageErrors).toEqual([])
   })

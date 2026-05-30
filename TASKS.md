@@ -8,10 +8,23 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
 
 ## Latest Resume Notes
 
-- The current Playwright browser suite is green at `78` tests.
+- The current Playwright browser suite is green at `79` tests.
 - The current full release gate is green on this tree:
   - `pnpm verify:core`
   - lint, typecheck, unit tests, browser tests, core build, demo build, bundle check, and `npm pack --dry-run` all passed together
+- Current verified results from that gate:
+  - unit suite: `141` passed
+  - browser suite: `79` passed
+  - built static demo smoke: passed
+  - current measured browser perf from the same run:
+    - representative: `loadMs ≈ 83.1`, `avgFrameMs ≈ 10.85`, `p95FrameMs ≈ 9.60`, `approxFps ≈ 92.15`
+    - stress: `220` nodes / `294` edges, `loadMs ≈ 276.0`, `avgFrameMs ≈ 9.52`, `p95FrameMs ≈ 16.90`, `approxFps ≈ 105.00`
+  - current packaged/build artifact checks from that same run:
+    - core ESM: `202.86 KiB` (`207724 bytes`)
+    - core CJS: `205.14 KiB` (`210067 bytes`)
+    - demo entry: `index-GB0OFqH4.js` `478.18 KiB` raw (`489659 bytes`) / `137.46 KiB` gzip (`140762 bytes`)
+    - dry-run tarball: `mermaid-render-core-1.0.0.tgz`, package size `275.4 kB`
+- `docs/release.md` and `docs/tech.md` now match that fresh gate instead of the older `140` / `78` checkpoint.
 - `@mermaid-render/core` is now versioned `1.0.0`, and the verified dry-run tarball is `mermaid-render-core-1.0.0.tgz`.
 - The built static demo artifact now has its own reproducible smoke path:
   - `pnpm --filter @mermaid-render/core test:browser:static-demo`
@@ -52,6 +65,17 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
   - `packages/core/tests/browser/render.spec.ts-snapshots/self-loop-bidirectional-chromium-darwin.png`
   - `packages/core/tests/browser/render.spec.ts-snapshots/stress-mode-suppression-chromium-darwin.png`
   - `packages/core/tests/browser/render.spec.ts-snapshots/relayout-mid-motion-clean-frame-chromium-darwin.png`
+  - `packages/core/tests/browser/render.spec.ts-snapshots/blueprint-rendered-footprint-routing-chromium-darwin.png`
+  - `packages/core/tests/browser/render.spec.ts-snapshots/edge-endpoints-boundary-simple-flow-chromium-darwin.png`
+  - `packages/core/tests/browser/render.spec.ts-snapshots/fit-to-view-recovery-chromium-darwin.png`
+  - `packages/core/tests/browser/render.spec.ts-snapshots/fit-to-view-reload-chromium-darwin.png`
+  - `packages/core/tests/browser/render.spec.ts-snapshots/hover-glow-expanded-bounds-chromium-darwin.png`
+  - `packages/core/tests/browser/render.spec.ts-snapshots/nonblueprint-crossing-warning-state-chromium-darwin.png`
+  - `packages/core/tests/browser/render.spec.ts-snapshots/preview-target-philosophy-blueprint-chromium-darwin.png`
+  - `packages/core/tests/browser/render.spec.ts-snapshots/preview-target-philosophy-breath-chromium-darwin.png`
+  - `packages/core/tests/browser/render.spec.ts-snapshots/selection-cleared-after-rebuild-chromium-darwin.png`
+  - `packages/core/tests/browser/render.spec.ts-snapshots/zoom-clamp-max-chromium-darwin.png`
+  - `packages/core/tests/browser/render.spec.ts-snapshots/zoom-clamp-min-chromium-darwin.png`
 - The runtime/demo v1 support boundary is `flowchart` only. `classDiagram` is not currently supported by the parser/runtime, so unsupported example files must not appear in the visible demo corpus or release claims.
 - `docs/vision.md` now matches that v1 release scope:
   - web engine + static demo are the shipped consumers
@@ -382,13 +406,31 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
 - `packages/core/tests/browser/render.spec.ts`
   - Added real browser render integration coverage for load/render, fold/unfold, focus navigation, fit-to-view bounds, representative node/label non-overlap across zoom levels, non-rectangular label containment, hover glow using current rendered bounds, hover clearing on pointer-leave, topmost-node hover dispatch under deliberate screen-space overlap, simple-flow edge endpoint boundary placement, self-loop visibility, opposite-direction edge separation, edge-label clearance from nodes and rendered edge paths, empty-canvas deselect, selected-node z-order, selection clearing across graph rebuilds, philosophy switch preserving fold state, relative cross-file navigation with target-node reveal, hover preview on-screen clamping and dismissal after leaving node+popup, broken-link click feedback, broken-link badge screenshot regression, stress-mode activation on large graphs, plain-page embed API mounting, direct multi-instance coexistence, lifecycle misuse errors, synthetic context-loss recovery, visibility pause/resume, idle ticker shutdown/resume, renderer-init failure fallback state, invalid Mermaid on-canvas/UI failure state, browser-side performance sampling, and non-hanging WebGPU support reporting.
   - Added direct browser proof that extreme zoom requests clamp to the supported `0.1` / `5.0` range instead of running away past the renderer limits.
+  - Added committed browser snapshot artifacts for both ends of the zoom clamp range:
+    - `zoom-clamp-max-chromium-darwin.png`
+    - `zoom-clamp-min-chromium-darwin.png`
+  - Added a committed browser snapshot artifact for the current-bounds hover-glow path on an expanded long-label node:
+    - `hover-glow-expanded-bounds-chromium-darwin.png`
+  - Added a committed browser snapshot artifact for the stranded-viewport recovery path after `fitToView()` brings content back on-screen:
+    - `fit-to-view-recovery-chromium-darwin.png`
+  - Added a committed browser snapshot artifact for the ordinary reload + `fitToView()` path:
+    - `fit-to-view-reload-chromium-darwin.png`
+  - Added a committed browser snapshot artifact for the selection-cleared state after fold/rebuild operations:
+    - `selection-cleared-after-rebuild-chromium-darwin.png`
 - `packages/core/tests/browser/render.spec.ts`
   - Added supported-corpus overlap coverage proving shipped visible demo examples plus the generated stress graph stay free of node-on-node overlap.
   - This coverage explicitly excludes unsupported `classDiagram` demo input from release claims.
 - `packages/core/tests/browser/render.spec.ts`
   - Added browser proof that Blueprint routed wires stay out of a rendered long-label node footprint, so the router and the Pixi-rendered node width no longer disagree.
+  - Added a committed browser snapshot artifact for that rendered-footprint routing invariant:
+    - `blueprint-rendered-footprint-routing-chromium-darwin.png`
+  - Added committed browser snapshot artifacts proving cross-file hover previews actually restyle to the target file's philosophy instead of staying on a hardcoded preview treatment:
+    - `preview-target-philosophy-blueprint-chromium-darwin.png`
+    - `preview-target-philosophy-breath-chromium-darwin.png`
 - `packages/core/tests/browser/render.spec.ts`
   - Added browser proof that when Blueprint routing cannot find a clear orthogonal path, the renderer still draws a visible fallback wire and surfaces a readable congestion warning.
+  - Added a committed browser snapshot artifact for the non-Blueprint crossing warning state:
+    - `nonblueprint-crossing-warning-state-chromium-darwin.png`
 - `packages/core/src/renderer/__tests__/theme-emphasis.test.ts`
   - Added explicit emphasis/dimming contract coverage:
     - hover glow must remain perceptibly distinct from the base node fill
@@ -942,6 +984,8 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
    - browser assertions now prove:
      - the rendered arrow tip sits on the same final endpoint that lands on the target node boundary
      - the rendered arrow angle follows the actual final segment direction
+   - added a committed browser snapshot artifact for the simple-flow boundary/arrowhead state:
+     - `edge-endpoints-boundary-simple-flow-chromium-darwin.png`
    - verified with:
      - `pnpm --filter @mermaid-render/core exec playwright test -g "keeps simple-flow edge endpoints on rendered node boundaries"`
 

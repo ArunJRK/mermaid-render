@@ -74,8 +74,8 @@ For this codebase, the authoritative numbers are the browser harness runs in `pa
 
 | Scenario | Nodes | Edges | Load time | Avg frame | Approx FPS |
 |----------|------:|------:|----------:|----------:|-----------:|
-| Representative graph | 7 | 6 | ~73ms | ~10.4ms | ~95.9 |
-| Stress graph | 220 | 294 | ~243ms | ~9.5ms | ~105.0 |
+| Representative graph | 7 | 6 | ~83ms | ~10.9ms | ~92.1 |
+| Stress graph | 220 | 294 | ~276ms | ~9.5ms | ~105.0 |
 
 Current v1 performance contract:
 
@@ -173,10 +173,10 @@ That higher ceiling is intentional. The demo bundle includes:
 Current measured outputs:
 
 - `@mermaid-render/core` build output:
-  - `dist/index.js`: ~`202.28 KiB`
-  - `dist/index.cjs`: ~`204.57 KiB`
+  - `dist/index.js`: ~`202.86 KiB`
+  - `dist/index.cjs`: ~`205.14 KiB`
 - Demo web app entry chunk:
-  - latest `packages/core/dist-demo/assets/index-*.js`: ~`477.90 KiB` minified / `137.33 KiB` gzip
+  - latest `packages/core/dist-demo/assets/index-*.js`: ~`478.18 KiB` minified / `137.46 KiB` gzip
 
 The bundled example `.mmd` files are now lazy-loaded as separate static chunks instead of being inlined into the initial demo entry bundle. That reduced the entry chunk slightly and, more importantly, removed example corpus size from the first-load cost. The remaining large first chunk is now mostly renderer/runtime code rather than raw example content.
 
@@ -192,8 +192,8 @@ pnpm verify:core
 
 Latest verified current-tree result:
 
-- unit tests: `140` passed
-- browser tests: `78` passed
+- unit tests: `141` passed
+- browser tests: `79` passed
 - built static demo smoke test: passed
 - lint, typecheck, core build, demo build, bundle-budget check, and `npm pack --dry-run`: passed
 
