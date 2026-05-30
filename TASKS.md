@@ -56,6 +56,20 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
     - `44b` is the remaining adapter-backed WebGPU device-lost recovery branch
   - direct environment probe evidence on this machine now shows why only `44b` remains blocked here:
     - headless Chromium `148.0.7778.96` reports `navigator.gpu === undefined`
+
+- The relayout/animation slice now also has its own focused browser gate:
+  - `pnpm --filter @mermaid-render/core test:browser:relayout`
+  - current result: `9` passed
+  - it isolates the main animated-proof surface for `goal.md` items `30`, `48`, `49`, and the active runtime half of `50`:
+    - fold state survives a philosophy switch
+    - no orphaned or duplicate sprites across rebuilds
+    - interrupted relayouts settle cleanly with no fade residue
+    - edge endpoints stay attached during live motion
+    - mid-motion inventory remains clean
+    - a mid-relayout frame stays visually clean
+    - node motion progresses smoothly instead of teleporting
+    - relayout motion pauses while hidden and resumes when visible
+    - stress mode skips relayout fade/motion work
     - that remained true under:
       - default launch
       - `--enable-unsafe-webgpu --ignore-gpu-blocklist`

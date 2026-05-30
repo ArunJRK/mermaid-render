@@ -158,6 +158,24 @@ That focused run covers:
 - readable renderer-init and no-backend fallback states
 - WebGPU device-loss probe behavior
 
+There is also a focused browser gate for the relayout and animation proof surface:
+
+```bash
+pnpm --filter @mermaid-render/core test:browser:relayout
+```
+
+That focused run covers:
+
+- fold state surviving a philosophy switch
+- no orphaned or duplicate sprites across rebuilds
+- clean settled state after rapid relayout interruptions
+- edge endpoints staying attached during live relayout motion
+- clean mid-motion inventory
+- clean mid-relayout canvas frame
+- smooth node progression instead of teleporting
+- hidden-tab pause / visible-tab resume during active relayout
+- stress-mode relayout fast path
+
 Current environment expectation:
 
 - in ordinary CI or headless Chromium without a usable WebGPU adapter, the WebGPU probe should finish quickly with an explicit adapter-unavailable result instead of hanging

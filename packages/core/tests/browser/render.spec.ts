@@ -1594,12 +1594,20 @@ graph TD
       targetBounds!.y + targetBounds!.height,
       ...movedEdge!.screenPoints.map((point) => point.y),
     ]
+    const minX = Math.min(...xs)
+    const maxX = Math.max(...xs)
+    const minY = Math.min(...ys)
+    const maxY = Math.max(...ys)
+    const clipWidth = 560
+    const clipHeight = 400
+    const clipCenterX = (minX + maxX) / 2
+    const clipCenterY = (minY + maxY) / 2
     const attachedMotionShot = await page.screenshot({
       clip: {
-        x: Math.max(0, Math.floor(Math.min(...xs) - 24)),
-        y: Math.max(0, Math.floor(Math.min(...ys) - 24)),
-        width: Math.ceil(Math.max(...xs) - Math.min(...xs) + 48),
-        height: Math.ceil(Math.max(...ys) - Math.min(...ys) + 48),
+        x: Math.max(0, Math.floor(clipCenterX - clipWidth / 2)),
+        y: Math.max(0, Math.floor(clipCenterY - clipHeight / 2)),
+        width: clipWidth,
+        height: clipHeight,
       },
     })
     expect(attachedMotionShot).toMatchSnapshot('relayout-moving-edge-attached.png')
