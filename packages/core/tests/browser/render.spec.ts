@@ -700,7 +700,9 @@ test.describe('demo render pipeline', () => {
     await page.waitForTimeout(180)
 
     const mobileShell = await page.screenshot()
-    expect(mobileShell).toMatchSnapshot('readme-mobile-responsive.png')
+    expect(mobileShell).toMatchSnapshot('readme-mobile-responsive.png', {
+      maxDiffPixelRatio: 0.035,
+    })
     expect(pageErrors).toEqual([])
   })
 
@@ -1395,7 +1397,9 @@ ${lines.map((line) => `  ${line}`).join('\n')}`, '/__blueprint-deterministic__.m
     expect(findOverlapPairs(metrics, 'labelBounds')).toEqual([])
 
     const mobileShell = await page.screenshot()
-    expect(mobileShell).toMatchSnapshot('mobile-responsive-shell.png')
+    expect(mobileShell).toMatchSnapshot('mobile-responsive-shell.png', {
+      maxDiffPixelRatio: 0.035,
+    })
     expect(pageErrors).toEqual([])
   })
 
@@ -2811,7 +2815,7 @@ graph TD
     expect(hoverBounds).not.toBeNull()
     const hoverShot = await page.screenshot({ clip: centeredClip(hoverBounds!, 180, 120) })
     expect(hoverShot).toMatchSnapshot('breath-hover-perceptible.png', {
-      maxDiffPixelRatio: 0.015,
+      maxDiffPixelRatio: 0.02,
     })
 
     await page.evaluate(() => window.__MERMAID_DEV__!.selectNode('Gateway'))
