@@ -8,23 +8,23 @@ Continue from `goal.md` toward `@mermaid-render/core` v1 web/demo release. Curre
 
 ## Latest Resume Notes
 
-- The current Playwright browser suite is green at `82` tests.
+- The current Playwright browser suite is green at `83` tests.
 - The current full release gate is green on this tree:
   - `pnpm verify:core`
   - lint, typecheck, unit tests, browser tests, core build, demo build, bundle check, and `npm pack --dry-run` all passed together
 - Current verified results from that gate:
   - unit suite: `142` passed
-  - browser suite: `82` passed
+  - browser suite: `83` passed
   - built static demo smoke: passed
   - current measured browser perf from the same run:
-    - representative: `loadMs ≈ 86.0`, `avgFrameMs ≈ 10.85`, `p95FrameMs ≈ 8.80`, `approxFps ≈ 92.13`
-    - stress: `220` nodes / `294` edges, `loadMs ≈ 256.6`, `avgFrameMs ≈ 9.53`, `p95FrameMs ≈ 16.80`, `approxFps ≈ 104.96`
+    - representative: `loadMs ≈ 102.7`, `avgFrameMs ≈ 11.42`, `p95FrameMs ≈ 9.20`, `approxFps ≈ 87.60`
+    - stress: `220` nodes / `294` edges, `loadMs ≈ 283.0`, `avgFrameMs ≈ 9.80`, `p95FrameMs ≈ 25.00`, `approxFps ≈ 102.00`
   - current packaged/build artifact checks from that same run:
     - core ESM: `202.86 KiB` (`207724 bytes`)
     - core CJS: `205.14 KiB` (`210067 bytes`)
-    - demo entry: `index-GB0OFqH4.js` `478.18 KiB` raw (`489659 bytes`) / `137.46 KiB` gzip (`140762 bytes`)
-    - dry-run tarball: `mermaid-render-core-1.0.0.tgz`, package size `275.4 kB`
-- `docs/release.md` and `docs/tech.md` now match that fresh gate instead of the older `141` / `79` checkpoint.
+    - demo entry: `index-C8tk_jFF.js` `478.38 KiB` raw (`489864 bytes`) / `137.53 KiB` gzip (`140829 bytes`)
+    - dry-run tarball: `mermaid-render-core-1.0.0.tgz`, package size `275.8 kB`
+- `docs/release.md` and `docs/tech.md` now match that fresh gate instead of the older `142` / `82` checkpoint.
 - Requirement-audit tie-backs on the current tree:
   - `goal.md` item `7` is covered by the browser/lifecycle suite:
     - regular render path proves a real GPU backend is active

@@ -210,6 +210,7 @@ declare global {
       navigateTo(filePath: string, targetNode?: string): Promise<boolean>
       clickLink(nodeId: string): boolean
       selectNode(nodeId: string | null): void
+      forceHoverNode(nodeId: string | null): void
       setLayout(layout: string): void
       setThemeMode(mode: 'system' | 'dark' | 'light'): void
       foldNode(id: string): void
@@ -1454,6 +1455,24 @@ async function main() {
     },
     selectNode(nodeId: string | null) {
       ;(renderer as any).selectNode(nodeId)
+    },
+    forceHoverNode(nodeId: string | null) {
+      const rendererAny = renderer as any
+      const nodeSprites = rendererAny._nodeSprites as Map<string, any> | undefined
+      const previousId = rendererAny._hoveredNodeId as string | null | undefined
+      if (previousId && previousId !== nodeId) {
+        const previousSprite = nodeSprites?.get(previousId)
+        if (previousSprite) {
+          previousSprite.emit?.('pointerout')
+        }
+      }
+      if (nodeId) {
+        const sprite = nodeSprites?.get(nodeId)
+        if (sprite) {
+          sprite.emit?.('pointerover')
+        }
+      }
+      rendererAny._setHoveredNode(nodeId)
     },
     navigateTo(filePath: string, targetNode?: string) {
       return navigateToFile(filePath, targetNode)

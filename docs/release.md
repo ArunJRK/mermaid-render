@@ -29,12 +29,12 @@ That gate runs:
 Latest verified current-tree result:
 
 - unit tests: `142` passed
-- browser tests: `82` passed
+- browser tests: `83` passed
 - built static demo smoke test: passed
 - core ESM: `202.86 KiB`
 - core CJS: `205.14 KiB`
-- demo entry: `478.18 KiB` raw / `137.46 KiB` gzip
-- dry-run tarball: `mermaid-render-core-1.0.0.tgz`, package size `275.4 kB`
+- demo entry: `478.38 KiB` raw / `137.53 KiB` gzip
+- dry-run tarball: `mermaid-render-core-1.0.0.tgz`, package size `275.8 kB`
 
 ## Dry-Run the npm Package
 

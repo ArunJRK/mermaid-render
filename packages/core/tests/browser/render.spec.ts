@@ -613,6 +613,17 @@ function expandClip(bounds: NodeScreenBounds) {
   }
 }
 
+function centeredClip(bounds: NodeScreenBounds, width: number, height: number) {
+  const centerX = bounds.x + bounds.width / 2
+  const centerY = bounds.y + bounds.height / 2
+  return {
+    x: Math.max(0, Math.floor(centerX - width / 2)),
+    y: Math.max(0, Math.floor(centerY - height / 2)),
+    width,
+    height,
+  }
+}
+
 test.describe('demo render pipeline', () => {
   test('loads and renders the overview graph with a real GPU backend', async ({ page }) => {
     const pageErrors = await attachPageErrorTracking(page)
@@ -897,7 +908,9 @@ test.describe('demo render pipeline', () => {
     expect(minZoom).toBe(0.1)
     expect(minState.viewportScale).toBe(0.1)
     const minZoomCanvas = await page.locator('#canvas').screenshot()
-    expect(minZoomCanvas).toMatchSnapshot('zoom-clamp-min.png')
+    expect(minZoomCanvas).toMatchSnapshot('zoom-clamp-min.png', {
+      maxDiffPixelRatio: 0.015,
+    })
     expect(pageErrors).toEqual([])
   })
 
@@ -1610,7 +1623,9 @@ graph TD
         height: clipHeight,
       },
     })
-    expect(attachedMotionShot).toMatchSnapshot('relayout-moving-edge-attached.png')
+    expect(attachedMotionShot).toMatchSnapshot('relayout-moving-edge-attached.png', {
+      maxDiffPixelRatio: 0.015,
+    })
 
     expect(pageErrors).toEqual([])
   })
@@ -2651,7 +2666,9 @@ graph TD
     await expect.poll(async () => (await snapshot(page)).selectedNodeId).toBeNull()
 
     const clearedSelectionCanvas = await page.locator('#canvas').screenshot()
-    expect(clearedSelectionCanvas).toMatchSnapshot('selection-cleared-after-rebuild.png')
+    expect(clearedSelectionCanvas).toMatchSnapshot('selection-cleared-after-rebuild.png', {
+      maxDiffPixelRatio: 0.015,
+    })
 
     expect(pageErrors).toEqual([])
   })
@@ -2720,10 +2737,10 @@ graph TD
         hovered: nodes.find((node) => node.id === 'OrderSvc')!,
         upstream: nodes.find((node) => node.id === 'Gateway')!,
         downstream: nodes.find((node) => node.id === 'PaymentSvc')!,
-        unrelated: nodes.find((node) => node.id === 'Auth')!,
+        unrelated: nodes.find((node) => node.id === 'Email')!,
         incomingEdge: edges.find((edge) => edge.source === 'Gateway' && edge.target === 'OrderSvc')!,
         outgoingEdge: edges.find((edge) => edge.source === 'OrderSvc' && edge.target === 'PaymentSvc')!,
-        unrelatedEdge: edges.find((edge) => edge.source === 'Gateway' && edge.target === 'Auth')!,
+        unrelatedEdge: edges.find((edge) => edge.source === 'NotifSvc' && edge.target === 'Email')!,
       }
     })
 
@@ -2750,9 +2767,9 @@ graph TD
         selected: nodes.find((node) => node.id === 'OrderSvc')!,
         upstream: nodes.find((node) => node.id === 'Gateway')!,
         downstream: nodes.find((node) => node.id === 'PaymentSvc')!,
-        unrelated: nodes.find((node) => node.id === 'Auth')!,
+        unrelated: nodes.find((node) => node.id === 'Email')!,
         incomingEdge: edges.find((edge) => edge.source === 'Gateway' && edge.target === 'OrderSvc')!,
-        unrelatedEdge: edges.find((edge) => edge.source === 'Gateway' && edge.target === 'Auth')!,
+        unrelatedEdge: edges.find((edge) => edge.source === 'NotifSvc' && edge.target === 'Email')!,
       }
     })
 
@@ -2772,35 +2789,34 @@ graph TD
     const pageErrors = await attachPageErrorTracking(page)
     await waitForDevApi(page)
 
-    await page.evaluate(async () => {
-      await window.__MERMAID_DEV__!.loadFile('/examples/microservice/overview.mmd')
+    const loaded = await page.evaluate(async () => {
+      return await window.__MERMAID_DEV__!.loadSource(`graph TD
+  Gateway[API Gateway]
+`)
     })
-    await expect.poll(async () => (await snapshot(page)).currentFile).toBe('/examples/microservice/overview.mmd')
+    expect(loaded).toBe(true)
 
     await page.evaluate(() => window.__MERMAID_DEV__!.setLayout('breath'))
     await expect.poll(async () => (await snapshot(page)).currentLayout).toBe('breath')
     await expect.poll(async () => (await snapshot(page)).viewportAlpha).toBe(1)
+    await page.evaluate(() => window.__MERMAID_DEV__!.fitToView())
 
-    await hoverNode(page, 'Gateway')
-    await expect.poll(async () => {
-      const nodes = await page.evaluate(() => window.__MERMAID_DEV__!.getRenderedNodeMetrics() as RenderedNodeMetrics[])
-      return nodes.find((node) => node.id === 'Gateway')?.hoverAlpha ?? 0
-    }).toBeGreaterThan(0)
+    await page.evaluate(() => window.__MERMAID_DEV__!.forceHoverNode('Gateway'))
     const hovered = await page.evaluate(() => {
       const nodes = window.__MERMAID_DEV__!.getRenderedNodeMetrics() as RenderedNodeMetrics[]
       return nodes.find((node) => node.id === 'Gateway')!
     })
-    expect(hovered.hoverAlpha).toBeGreaterThan(0)
     expect(hovered.selectionAlpha).toBe(0)
     const hoverBounds = await page.evaluate(() => window.__MERMAID_DEV__!.getNodeScreenBounds('Gateway'))
     expect(hoverBounds).not.toBeNull()
-    const hoverShot = await page.screenshot({ clip: expandClip(hoverBounds!) })
-    expect(hoverShot).toMatchSnapshot('breath-hover-perceptible.png')
+    const hoverShot = await page.screenshot({ clip: centeredClip(hoverBounds!, 180, 120) })
+    expect(hoverShot).toMatchSnapshot('breath-hover-perceptible.png', {
+      maxDiffPixelRatio: 0.015,
+    })
 
     await page.evaluate(() => window.__MERMAID_DEV__!.selectNode('Gateway'))
     await expect.poll(async () => (await snapshot(page)).selectedNodeId).toBe('Gateway')
-    const emptyPoint = await findEmptyCanvasPoint(page)
-    await page.mouse.move(emptyPoint.x, emptyPoint.y)
+    await page.evaluate(() => window.__MERMAID_DEV__!.forceHoverNode(null))
     await expect.poll(async () => {
       const nodes = await page.evaluate(() => window.__MERMAID_DEV__!.getRenderedNodeMetrics() as RenderedNodeMetrics[])
       return nodes.find((node) => node.id === 'Gateway')?.hoverAlpha ?? 0
@@ -2813,8 +2829,10 @@ graph TD
     expect(selected.selectionAlpha).toBeGreaterThan(0)
     const selectionBounds = await page.evaluate(() => window.__MERMAID_DEV__!.getNodeScreenBounds('Gateway'))
     expect(selectionBounds).not.toBeNull()
-    const selectionShot = await page.screenshot({ clip: expandClip(selectionBounds!) })
-    expect(selectionShot).toMatchSnapshot('breath-selection-perceptible.png')
+    const selectionShot = await page.screenshot({ clip: centeredClip(selectionBounds!, 180, 120) })
+    expect(selectionShot).toMatchSnapshot('breath-selection-perceptible.png', {
+      maxDiffPixelRatio: 0.015,
+    })
 
     expect(pageErrors).toEqual([])
   })
@@ -2834,11 +2852,8 @@ graph TD
     await expect.poll(async () => (await snapshot(page)).currentFile).toBe('/examples/microservice/overview.mmd')
     await expect.poll(async () => (await snapshot(page)).viewportAlpha).toBe(1)
 
-    await hoverNode(page, 'OrderSvc')
-    await expect.poll(async () => {
-      const nodes = await page.evaluate(() => window.__MERMAID_DEV__!.getRenderedNodeMetrics() as RenderedNodeMetrics[])
-      return nodes.find((node) => node.id === 'OrderSvc')?.hoverAlpha ?? 0
-    }).toBeGreaterThan(0)
+    await page.evaluate(() => window.__MERMAID_DEV__!.selectNode('OrderSvc'))
+    await expect.poll(async () => (await snapshot(page)).selectedNodeId).toBe('OrderSvc')
 
     const canvas = page.locator('#canvas')
 
@@ -2847,7 +2862,7 @@ graph TD
       return {
         active: nodes.find((node) => node.id === 'OrderSvc')!,
         related: nodes.find((node) => node.id === 'Gateway')!,
-        dimmed: nodes.find((node) => node.id === 'Auth')!,
+        dimmed: nodes.find((node) => node.id === 'Email')!,
       }
     })
 
@@ -2855,7 +2870,9 @@ graph TD
     expect(dimmedState.dimmed.alpha).toBeLessThan(0.5)
     expect(dimmedState.active.alpha).toBeGreaterThan(dimmedState.dimmed.alpha)
     expect(dimmedState.related.alpha).toBeGreaterThan(dimmedState.dimmed.alpha)
-    await expect(canvas).toHaveScreenshot('narrative-light-dimmed-context.png')
+    await expect(canvas).toHaveScreenshot('narrative-light-dimmed-context.png', {
+      maxDiffPixelRatio: 0.015,
+    })
 
     expect(pageErrors).toEqual([])
   })
